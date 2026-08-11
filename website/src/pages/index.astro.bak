@@ -4,38 +4,36 @@ import menu from "../data/menu.json";
 
 const restaurant = menu.restaurant;
 
-const BASE = import.meta.env.BASE_URL;
-
 const categories = [
   {
     id: "burger",
     name: "برگر",
-    image: `${BASE}images/burger.jpeg`,
-    href: `${BASE}menu/burger`
+    image: "/images/burger.jpeg",
+    href: "/menu/burger"
   },
   {
     id: "sandwich",
     name: "ساندویچ",
-    image: `${BASE}images/sandwich.jpeg`,
-    href: `${BASE}menu/sandwich`
+    image: "/images/sandwich.jpeg",
+    href: "/menu/sandwich"
   },
   {
     id: "fried",
     name: "سوخاری",
-    image: `${BASE}images/fried.jpeg`,
-    href: `${BASE}menu/fried`
+    image: "/images/fried.jpeg",
+    href: "/menu/fried"
   },
   {
     id: "potato",
     name: "سیب‌زمینی",
-    image: `${BASE}images/potato.jpeg`,
-    href: `${BASE}menu/potato`
+    image: "/images/potato.jpeg",
+    href: "/menu/potato"
   },
   {
     id: "special",
     name: "ویژه",
-    image: `${BASE}images/special.jpeg`,
-    href: `${BASE}menu/special`
+    image: "/images/special.jpeg",
+    href: "/menu/special"
   }
 ];
 ---
@@ -55,7 +53,7 @@ const categories = [
 
   <meta name="theme-color" content="#FFFC36" />
 
-  <link rel="icon" href={`${import.meta.env.BASE_URL}/images/logo.png`} />
+  <link rel="icon" href={`${import.meta.env.BASE_URL}images/logo.png`} />
 </head>
 
 <body>
@@ -66,7 +64,7 @@ const categories = [
     <section class="about">
 
       <img
-        src={`${import.meta.env.BASE_URL}/images/logo.png`}
+        src={`${import.meta.env.BASE_URL}images/logo.png`}
         class="restaurant-logo"
         alt={restaurant.name}
       />

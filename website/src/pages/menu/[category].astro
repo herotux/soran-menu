@@ -30,7 +30,7 @@ const { category } = Astro.props;
   <style>
     @font-face {
       font-family: Vazir;
-      src: url('/fonts/Vazir.ttf');
+      src: url('${import.meta.env.BASE_URL}/fonts/Vazir.ttf');
     }
 
     * {
@@ -193,7 +193,7 @@ const { category } = Astro.props;
     <header class="header">
       <img
         class="logo"
-        src={menu.restaurant.logo}
+        src={`${import.meta.env.BASE_URL}${menu.restaurant.logo}`}
         alt={menu.restaurant.name}
       />
 
@@ -211,7 +211,7 @@ const { category } = Astro.props;
 
           <img
             class="item-image"
-            src={item.image}
+            src={`${import.meta.env.BASE_URL}${item.image}`}
             alt={item.name}
             loading="lazy"
           />
