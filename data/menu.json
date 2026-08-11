@@ -1,0 +1,65 @@
+{
+  "restaurant": {
+    "name": "خانه سیب‌زمینی (سوران)",
+    "description": "منوی آنلاین خانه سیب‌زمینی (سوران)",
+    "logo": "/images/logo.jpg",
+    "theme": {
+      "background": "#000000",
+      "accent": "#62FF00",
+      "secondary": "#FFFC36"
+    }
+  },
+  "categories": [
+    {
+      "id": "potato",
+      "name": "سیب‌زمینی",
+      "items": [
+        {
+          "id": "65762",
+          "name": "سیب ساده",
+          "description": "سیب‌زمینی بلژیکی با سس مخصوص",
+          "price": 160,
+          "oldPrice": 200,
+          "image": "/images/65762.jpg",
+          "available": true
+        },
+        {
+          "id": "65763",
+          "name": "سیب پنیری",
+          "description": "سیب‌زمینی باژیکی با پنیر و سس",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/65763.jpg",
+          "available": true
+        },
+        {
+          "id": "65764",
+          "name": "سیب ویژه",
+          "description": "سیب زمینی بلژیکی + قارچ + پنیر + پروسس + مخلفات",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/65764.jpg",
+          "available": true
+        },
+        {
+          "id": "65765",
+          "name": "سیب مخصوص",
+          "description": "سیب‌زمینی بلژیکی + پنیر + قارچ + ژامبون + پروسس + مخلفات",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/65765.jpg",
+          "available": true
+        },
+        {
+          "id": "68029",
+          "name": "سیب پپرونی",
+          "description": "سیب‌زمینی + پپرونی + پنیر + قارچ + پروسس + مخلفات",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/68029.jpg",
+          "available": true
+        }
+      ]
+    }
+  ]
+}

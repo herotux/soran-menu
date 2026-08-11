@@ -1,0 +1,259 @@
+---
+import menu from '../../data/menu.json';
+
+export function getStaticPaths() {
+  return menu.categories.map((category) => ({
+    params: {
+      category: category.id
+    },
+    props: {
+      category
+    }
+  }));
+}
+
+const { category } = Astro.props;
+---
+
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>{category.name} | {menu.restaurant.name}</title>
+
+  <meta
+    name="description"
+    content={`${category.name} - ${menu.restaurant.name}`}
+  />
+
+  <style>
+    @font-face {
+      font-family: Vazir;
+      src: url('/fonts/Vazir.ttf');
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: Vazir, Arial, sans-serif;
+    }
+
+    .content {
+      width: min(1100px, 94%);
+      margin: auto;
+      padding-bottom: 100px;
+    }
+
+    .header {
+      text-align: center;
+      padding: 25px 10px;
+    }
+
+    .logo {
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #fffc36;
+    }
+
+    .header h1 {
+      color: #fffc36;
+      font-size: 24px;
+      margin: 12px 0 5px;
+    }
+
+    .category-title {
+      text-align: center;
+      margin: 20px 0 25px;
+    }
+
+    .category-title h2 {
+      display: inline-block;
+      color: #fffc36;
+      border-bottom: 2px solid #fffc36;
+      padding: 0 15px 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .item {
+      background: #0a0a0a;
+      border: 1px solid #292929;
+      border-radius: 15px;
+      overflow: hidden;
+      transition: .2s;
+    }
+
+    .item:hover {
+      border-color: #fffc36;
+      transform: translateY(-2px);
+    }
+
+    .item-image {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      display: block;
+    }
+
+    .item-body {
+      padding: 12px;
+    }
+
+    .item-body h3 {
+      margin: 0 0 7px;
+      color: #fffc36;
+      font-size: 18px;
+    }
+
+    .item-body p {
+      margin: 0 0 12px;
+      color: #ccc;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .prices {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .prices del {
+      color: #888;
+      font-size: 12px;
+    }
+
+    .prices strong {
+      color: #62ff00;
+      font-size: 17px;
+    }
+
+    .unavailable {
+      opacity: .45;
+    }
+
+    .soldout {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: #333;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      text-align: center;
+      padding: 15px;
+      background: rgba(15,15,15,.95);
+      border-top: 1px solid #222;
+      color: #aaa;
+      z-index: 10;
+    }
+
+    @media (max-width: 600px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .content {
+        width: 94%;
+      }
+
+      .item-image {
+        aspect-ratio: 16 / 10;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="content">
+
+    <header class="header">
+      <img
+        class="logo"
+        src={menu.restaurant.logo}
+        alt={menu.restaurant.name}
+      />
+
+      <h1>{menu.restaurant.name}</h1>
+    </header>
+
+    <section class="category-title">
+      <h2>{category.name}</h2>
+    </section>
+
+    <div class="grid">
+
+      {category.items.map((item) => (
+        <article class:list={["item", !item.available && "unavailable"]}>
+
+          <img
+            class="item-image"
+            src={item.image}
+            alt={item.name}
+            loading="lazy"
+          />
+
+          <div class="item-body">
+
+            <h3>{item.name}</h3>
+
+            <p>{item.description}</p>
+
+            <div class="prices">
+
+              {item.oldPrice && (
+                <del>
+                  {item.oldPrice.toLocaleString('fa-IR')} هزار تومان
+                </del>
+              )}
+
+              <strong>
+                {item.price.toLocaleString('fa-IR')} هزار تومان
+              </strong>
+
+            </div>
+
+            {!item.available && (
+              <span class="soldout">
+                ناموجود
+              </span>
+            )}
+
+          </div>
+
+        </article>
+      ))}
+
+    </div>
+
+  </main>
+
+  <footer>
+    {menu.restaurant.name}
+  </footer>
+
+</body>
+</html>

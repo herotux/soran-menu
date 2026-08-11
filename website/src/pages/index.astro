@@ -1,0 +1,141 @@
+---
+import "../styles/global.css";
+import menu from "../data/menu.json";
+
+const restaurant = menu.restaurant;
+
+const categories = [
+  {
+    id: "burger",
+    name: "برگر",
+    image: "/images/burger.jpeg",
+    href: "/menu/burger"
+  },
+  {
+    id: "sandwich",
+    name: "ساندویچ",
+    image: "/images/sandwich.jpeg",
+    href: "/menu/sandwich"
+  },
+  {
+    id: "fried",
+    name: "سوخاری",
+    image: "/images/fried.jpeg",
+    href: "/menu/fried"
+  },
+  {
+    id: "potato",
+    name: "سیب‌زمینی",
+    image: "/images/potato.jpeg",
+    href: "/menu/potato"
+  },
+  {
+    id: "special",
+    name: "ویژه",
+    image: "/images/special.jpeg",
+    href: "/menu/special"
+  }
+];
+---
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>{restaurant.name}</title>
+
+  <meta
+    name="description"
+    content={restaurant.description}
+  />
+
+  <meta name="theme-color" content="#FFFC36" />
+
+  <link rel="icon" href="/images/logo.png" />
+</head>
+
+<body>
+
+  <main>
+
+    <!-- معرفی رستوران -->
+    <section class="about">
+
+      <img
+        src="/images/logo.png"
+        class="restaurant-logo"
+        alt={restaurant.name}
+      />
+
+      <h1>{restaurant.name}</h1>
+
+      <p>با ما مزه‌های جدید و تست کن</p>
+
+      <p class="address">
+        کوردستان شهرستان کامیاران خیابان بهشتی جنب پاساژ تجارت
+      </p>
+
+      <div class="social">
+
+        <a href="tel:09333440918">
+          📞
+        </a>
+
+        <a
+          href="https://www.instagram.com/khane_sibzamini_kamyaran01/"
+          target="_blank"
+          rel="nofollow"
+        >
+          📷
+        </a>
+
+      </div>
+
+      <a class="club" href="/caller/Surankhaki">
+        🎁 عضویت باشگاه مشتریان 🎁
+      </a>
+
+    </section>
+
+
+    <!-- دسته‌بندی‌ها -->
+    <section class="categories">
+
+      {
+        categories.map((category) => (
+          <a
+            href={category.href}
+            class="category"
+          >
+
+            <img
+              src={category.image}
+              alt={category.name}
+            />
+
+            <div class="category-title">
+              {category.name}
+            </div>
+
+          </a>
+        ))
+      }
+
+    </section>
+
+
+    <div class="footer">
+
+      ❤️
+      <a href="https://softmenu.ir">
+        منو دیجیتال سافت منو
+      </a>
+
+    </div>
+
+  </main>
+
+</body>
+</html>
