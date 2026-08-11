@@ -53,7 +53,7 @@ const categories = [
 
   <meta name="theme-color" content="#FFFC36" />
 
-  <link rel="icon" href="/images/logo.png" />
+  <link rel="icon" href={`${import.meta.env.BASE_URL}images/logo.png`} />
 </head>
 
 <body>
@@ -64,7 +64,7 @@ const categories = [
     <section class="about">
 
       <img
-        src="/images/logo.png"
+        src={`${import.meta.env.BASE_URL}images/logo.png`}
         class="restaurant-logo"
         alt={restaurant.name}
       />
