@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/app_settings.dart';
 
-class RemoteImage extends StatelessWidget {
+class RemoteImage extends StatefulWidget {
   final String path;
   final double? width;
   final double? height;
@@ -21,19 +21,45 @@ class RemoteImage extends StatelessWidget {
   });
 
   @override
+  State<RemoteImage> createState() => _RemoteImageState();
+}
+
+class _RemoteImageState extends State<RemoteImage> {
+  late Future<String> _urlFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _urlFuture = AppSettings.imageUrl(widget.path);
+  }
+
+  @override
+  void didUpdateWidget(covariant RemoteImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.path != widget.path) {
+      _urlFuture = AppSettings.imageUrl(widget.path);
+    }
+  }
+
+  Widget _errorWidget() {
+    return widget.error ??
+        const Center(
+          child: Icon(Icons.broken_image_outlined),
+        );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (path.trim().isEmpty) {
-      return error ??
-          const Center(
-            child: Icon(Icons.image_outlined),
-          );
+    if (widget.path.trim().isEmpty) {
+      return _errorWidget();
     }
 
     return FutureBuilder<String>(
-      future: AppSettings.imageUrl(path),
+      future: _urlFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return placeholder ??
+          return widget.placeholder ??
               const Center(
                 child: SizedBox(
                   width: 22,
@@ -48,23 +74,16 @@ class RemoteImage extends StatelessWidget {
         final url = snapshot.data ?? '';
 
         if (url.isEmpty) {
-          return error ??
-              const Center(
-                child: Icon(Icons.broken_image_outlined),
-              );
+          return _errorWidget();
         }
 
         return Image.network(
           url,
-          width: width,
-          height: height,
-          fit: fit,
-          errorBuilder: (_, __, ___) {
-            return error ??
-                const Center(
-                  child: Icon(Icons.broken_image_outlined),
-                );
-          },
+          width: widget.width,
+          height: widget.height,
+          fit: widget.fit,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => _errorWidget(),
         );
       },
     );
