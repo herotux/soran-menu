@@ -21,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+
   final Set<String> _expandedCategories = <String>{};
 
   final MenuRepository repo = RemoteMenuRepository();
@@ -572,7 +573,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategory(MenuCategory category) {
     final expanded =
-        _expandedCategories[category.id] ?? true;
 
     return Card(
       key: PageStorageKey<String>('category_${category.id}'),
@@ -583,7 +583,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         initiallyExpanded: expanded,
         onExpansionChanged: (value) {
-          _expandedCategories[category.id] = value;
         },
         title: Row(
           children: [
