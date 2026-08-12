@@ -18,6 +18,7 @@
     {
       "id": "potato",
       "name": "سیب‌زمینی",
+      "image": "",
       "items": [
         {
           "id": "65762",
@@ -70,7 +71,7 @@
           "description": "الکی",
           "price": 100,
           "oldPrice": null,
-          "image": "",
+          "image": "/images/716f28d5-157a-4f2b-b8e9-19277ffab30d.jpg",
           "available": true
         }
       ]
@@ -78,6 +79,7 @@
     {
       "id": "burger",
       "name": "برگر",
+      "image": "",
       "items": [
         {
           "id": "65653",
@@ -201,6 +203,7 @@
     {
       "id": "sandwich",
       "name": "ساندویچ",
+      "image": "",
       "items": [
         {
           "id": "65741",
@@ -234,6 +237,7 @@
     {
       "id": "fried",
       "name": "سوخاری",
+      "image": "",
       "items": [
         {
           "id": "65731",
@@ -267,6 +271,7 @@
     {
       "id": "special",
       "name": "ویژه",
+      "image": "",
       "items": [
         {
           "id": "65761",
