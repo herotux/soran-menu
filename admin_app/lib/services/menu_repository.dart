@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 import '../models/menu_models.dart';
 
 abstract class MenuRepository {
@@ -5,51 +9,36 @@ abstract class MenuRepository {
   Future<void> save(MenuData menu);
 }
 
-class LocalMenuRepository implements MenuRepository {
-  MenuData _data = MenuData(
-    restaurant: Restaurant(
-      name: 'خانه سیب‌زمینی (سوران)',
-      description: 'منوی آنلاین خانه سیب‌زمینی (سوران)',
-      logo: '/images/logo.jpg',
-      theme: RestaurantTheme(
-        background: '#000000',
-        accent: '#62FF00',
-        secondary: '#FFFC36',
-      ),
-    ),
-    categories: [
-      MenuCategory(
-        id: 'potato',
-        name: 'سیب‌زمینی',
-        items: [
-          MenuItemModel(
-            id: '65762',
-            name: 'سیب ساده',
-            description: 'سیب‌زمینی بلژیکی با سس مخصوص',
-            price: 160,
-            oldPrice: 200,
-            image: '/images/1708799418819.jpeg',
-          ),
-          MenuItemModel(
-            id: '65763',
-            name: 'سیب پنیری',
-            description: 'سیب‌زمینی بلژیکی با پنیر و سس',
-            price: 250,
-            oldPrice: 300,
-            image: '/images/1708799694662.jpeg',
-          ),
-        ],
-      ),
-    ],
-  );
+class RemoteMenuRepository implements MenuRepository {
+  static const String menuUrl =
+      'https://herotux.github.io/soran-menu/data/menu.json';
 
   @override
   Future<MenuData> load() async {
-    return _data;
+    final response = await http.get(
+      Uri.parse(menuUrl),
+      headers: const {
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'خطا در دریافت منو: HTTP ${response.statusCode}',
+      );
+    }
+
+    final json = jsonDecode(
+      utf8.decode(response.bodyBytes),
+    ) as Map<String, dynamic>;
+
+    return MenuData.fromJson(json);
   }
 
   @override
   Future<void> save(MenuData menu) async {
-    _data = menu;
+    throw UnimplementedError(
+      'ذخیره‌سازی GitHub هنوز پیاده‌سازی نشده است.',
+    );
   }
 }
