@@ -22,7 +22,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 
-  final Set<String> _expandedCategories = <String>{};
 
   final MenuRepository repo = RemoteMenuRepository();
 
