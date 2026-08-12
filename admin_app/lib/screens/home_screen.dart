@@ -12,7 +12,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final MenuRepository repo = LocalMenuRepository();
+  final MenuRepository repo = RemoteMenuRepository();
 
   MenuData? menu;
   bool loading = true;
