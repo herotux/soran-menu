@@ -34,10 +34,31 @@ jobs:
             --project-name=menu_admin \
             build_app
 
+      - name: Configure Android NDK
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("build_app/android/app/build.gradle.kts")
+          s = p.read_text()
+
+          if 'ndkVersion = "27.0.12077973"' not in s:
+              s = s.replace(
+                  'android {',
+                  'android {\n    ndkVersion = "27.0.12077973"',
+                  1
+              )
+
+          p.write_text(s)
+          PY
+
       - name: Copy admin app source
         run: |
           rm -rf build_app/lib
           cp -r admin_app/lib build_app/lib
+
+          rm -rf build_app/assets
+          cp -r admin_app/assets build_app/assets
 
           cp admin_app/pubspec.yaml build_app/pubspec.yaml
 
