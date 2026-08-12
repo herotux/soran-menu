@@ -572,8 +572,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategory(MenuCategory category) {
-    final expanded = _expandedCategories.contains(category.id);
-
     return Card(
       key: PageStorageKey<String>('category_${category.id}'),
       margin: const EdgeInsets.only(bottom: 10),
@@ -581,16 +579,8 @@ class _HomeScreenState extends State<HomeScreen> {
         key: PageStorageKey<String>(
           'expansion_${category.id}',
         ),
-        initiallyExpanded: expanded,
-        onExpansionChanged: (value) {
-          setState(() {
-            if (value) {
-              _expandedCategories.add(category.id);
-            } else {
-              _expandedCategories.remove(category.id);
-            }
-          });
-        },
+        initiallyExpanded: true,
+        maintainState: true,
         title: Row(
           children: [
             if (category.image.isNotEmpty)
