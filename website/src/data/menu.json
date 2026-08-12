@@ -3,6 +3,11 @@
     "name": "خانه سیب‌زمینی (سوران)",
     "description": "منوی آنلاین خانه سیب‌زمینی (سوران)",
     "logo": "/images/logo.jpg",
+    "phone": "",
+    "mobile": "",
+    "address": "",
+    "instagram": "",
+    "telegram": "",
     "theme": {
       "background": "#000000",
       "accent": "#62FF00",
@@ -10,59 +15,57 @@
     }
   },
   "categories": [
-
     {
-  "id": "potato",
-  "name": "سیب‌زمینی",
-  "items": [
-    {
-      "id": "65762",
-      "name": "سیب ساده",
-      "description": "سیب‌زمینی بلژیکی با سس مخصوص",
-      "price": 160,
-      "oldPrice": 200,
-      "image": "/images/1708799418819.jpeg",
-      "available": true
+      "id": "potato",
+      "name": "سیب‌زمینی",
+      "items": [
+        {
+          "id": "65762",
+          "name": "سیب ساده",
+          "description": "سیب‌زمینی بلژیکی با سس مخصوص",
+          "price": 160,
+          "oldPrice": 200,
+          "image": "/images/1708799418819.jpeg",
+          "available": true
+        },
+        {
+          "id": "65763",
+          "name": "سیب پنیری",
+          "description": "سیب‌زمینی بلژیکی با پنیر و سس",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/1708799694662.jpeg",
+          "available": true
+        },
+        {
+          "id": "65764",
+          "name": "سیب ویژه",
+          "description": "سیب‌زمینی بلژیکی + قارچ + پنیر + پروسس + مخلفات",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/1708799877602.jpeg",
+          "available": true
+        },
+        {
+          "id": "65765",
+          "name": "سیب مخصوص",
+          "description": "سیب‌زمینی بلژیکی + پنیر + قارچ + ژامبون + پروسس + مخلفات",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/1708799973158.jpeg",
+          "available": true
+        },
+        {
+          "id": "68029",
+          "name": "سیب پپرونی",
+          "description": "سیب‌زمینی + پپرونی + پنیر + قارچ + پروسس + مخلفات",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/1711576987503.jpeg",
+          "available": true
+        }
+      ]
     },
-    {
-      "id": "65763",
-      "name": "سیب پنیری",
-      "description": "سیب‌زمینی بلژیکی با پنیر و سس",
-      "price": 250,
-      "oldPrice": 300,
-      "image": "/images/1708799694662.jpeg",
-      "available": true
-    },
-    {
-      "id": "65764",
-      "name": "سیب ویژه",
-      "description": "سیب‌زمینی بلژیکی + قارچ + پنیر + پروسس + مخلفات",
-      "price": 250,
-      "oldPrice": 300,
-      "image": "/images/1708799877602.jpeg",
-      "available": true
-    },
-    {
-      "id": "65765",
-      "name": "سیب مخصوص",
-      "description": "سیب‌زمینی بلژیکی + پنیر + قارچ + ژامبون + پروسس + مخلفات",
-      "price": 250,
-      "oldPrice": 300,
-      "image": "/images/1708799973158.jpeg",
-      "available": true
-    },
-    {
-      "id": "68029",
-      "name": "سیب پپرونی",
-      "description": "سیب‌زمینی + پپرونی + پنیر + قارچ + پروسس + مخلفات",
-      "price": 250,
-      "oldPrice": 300,
-      "image": "/images/1711576987503.jpeg",
-      "available": true
-    }
-  ]
-},
-
     {
       "id": "burger",
       "name": "برگر",
@@ -257,21 +260,21 @@
       "name": "ویژه",
       "items": [
         {
-          "id": "65759",
-          "name": "بورک ژامبون و قارچ پنیری",
-          "description": "",
-          "price": 100,
-          "oldPrice": null,
-          "image": "/images/1708795148186.jpeg",
-          "available": true
-        },
-        {
           "id": "65761",
           "name": "سینی ویژه",
           "description": "سیب‌زمینی+قارچ سوخاری+فیله‌ سوخاری+بورک",
           "price": 450,
           "oldPrice": null,
           "image": "/images/1708795358305.jpeg",
+          "available": true
+        },
+        {
+          "id": "65759",
+          "name": "بورک ژامبون و قارچ پنیری",
+          "description": "",
+          "price": 100000,
+          "oldPrice": null,
+          "image": "/images/1708795148186.jpeg",
           "available": true
         }
       ]
