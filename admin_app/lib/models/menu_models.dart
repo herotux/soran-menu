@@ -30,12 +30,22 @@ class Restaurant {
   String name;
   String description;
   String logo;
+  String phone;
+  String mobile;
+  String address;
+  String instagram;
+  String telegram;
   RestaurantTheme theme;
 
   Restaurant({
     required this.name,
     required this.description,
     required this.logo,
+    this.phone = '',
+    this.mobile = '',
+    this.address = '',
+    this.instagram = '',
+    this.telegram = '',
     required this.theme,
   });
 
@@ -44,6 +54,11 @@ class Restaurant {
       name: json['name']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       logo: json['logo']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      mobile: json['mobile']?.toString() ?? '',
+      address: json['address']?.toString() ?? '',
+      instagram: json['instagram']?.toString() ?? '',
+      telegram: json['telegram']?.toString() ?? '',
       theme: RestaurantTheme.fromJson(
         Map<String, dynamic>.from(json['theme'] ?? {}),
       ),
@@ -55,6 +70,11 @@ class Restaurant {
       'name': name,
       'description': description,
       'logo': logo,
+      'phone': phone,
+      'mobile': mobile,
+      'address': address,
+      'instagram': instagram,
+      'telegram': telegram,
       'theme': theme.toJson(),
     };
   }

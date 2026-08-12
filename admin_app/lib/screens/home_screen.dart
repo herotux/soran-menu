@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../models/menu_models.dart';
 import '../services/menu_repository.dart';
+import '../services/app_settings.dart';
+import 'setup_screen.dart';
 import 'product_form_screen.dart';
 import 'settings_screen.dart';
+import 'restaurant_settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +25,37 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final configured = await AppSettings.isConfigured();
+
+    if (!mounted) return;
+
+    if (!configured) {
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const SetupScreen(),
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (result == true) {
+        _load();
+      } else {
+        setState(() {
+          loading = false;
+          error = 'برنامه هنوز راه‌اندازی نشده است.';
+        });
+      }
+
+      return;
+    }
+
     _load();
   }
 
@@ -374,6 +408,28 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             icon: const Icon(Icons.settings),
+          ),
+          IconButton(
+            tooltip: 'اطلاعات رستوران',
+            onPressed: () async {
+              final currentMenu = menu;
+              if (currentMenu == null) return;
+
+              final result = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RestaurantSettingsScreen(
+                    menu: currentMenu,
+                    repository: repo,
+                  ),
+                ),
+              );
+
+              if (result == true && mounted) {
+                setState(() {});
+              }
+            },
+            icon: const Icon(Icons.restaurant),
           ),
           IconButton(
             tooltip: 'بارگذاری مجدد',

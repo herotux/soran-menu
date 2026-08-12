@@ -7,45 +7,51 @@ class AppSettings {
   static const _branchKey = 'github_branch';
   static const _pathKey = 'github_menu_path';
   static const _siteUrlKey = 'site_url';
-
   static const _tokenKey = 'github_token';
 
   static const _secureStorage = FlutterSecureStorage();
 
-  static const defaultOwner = 'herotux';
-  static const defaultRepo = 'soran-menu';
-  static const defaultBranch = 'main';
-  static const defaultPath = 'src/data/menu.json';
-  static const defaultSiteUrl =
-      'https://herotux.github.io/soran-menu/';
-
   static Future<String> getOwner() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_ownerKey) ?? defaultOwner;
+    return prefs.getString(_ownerKey) ?? '';
   }
 
   static Future<String> getRepo() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_repoKey) ?? defaultRepo;
+    return prefs.getString(_repoKey) ?? '';
   }
 
   static Future<String> getBranch() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_branchKey) ?? defaultBranch;
+    return prefs.getString(_branchKey) ?? '';
   }
 
   static Future<String> getMenuPath() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_pathKey) ?? defaultPath;
+    return prefs.getString(_pathKey) ?? '';
   }
 
   static Future<String> getSiteUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_siteUrlKey) ?? defaultSiteUrl;
+    return prefs.getString(_siteUrlKey) ?? '';
   }
 
   static Future<String> getToken() async {
     return await _secureStorage.read(key: _tokenKey) ?? '';
+  }
+
+  static Future<bool> isConfigured() async {
+    final owner = await getOwner();
+    final repo = await getRepo();
+    final branch = await getBranch();
+    final path = await getMenuPath();
+    final token = await getToken();
+
+    return owner.isNotEmpty &&
+        repo.isNotEmpty &&
+        branch.isNotEmpty &&
+        path.isNotEmpty &&
+        token.isNotEmpty;
   }
 
   static Future<void> save({
@@ -74,7 +80,15 @@ class AppSettings {
     }
   }
 
-  static Future<void> clearToken() async {
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.remove(_ownerKey);
+    await prefs.remove(_repoKey);
+    await prefs.remove(_branchKey);
+    await prefs.remove(_pathKey);
+    await prefs.remove(_siteUrlKey);
+
     await _secureStorage.delete(key: _tokenKey);
   }
 }
