@@ -127,11 +127,13 @@ class MenuItemModel {
 class MenuCategory {
   String id;
   String name;
+  String image;
   List<MenuItemModel> items;
 
   MenuCategory({
     required this.id,
     required this.name,
+    this.image = '',
     required this.items,
   });
 
@@ -139,6 +141,7 @@ class MenuCategory {
     return MenuCategory(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
+      image: json['image']?.toString() ?? '',
       items: (json['items'] as List<dynamic>? ?? [])
           .map(
             (item) => MenuItemModel.fromJson(
@@ -153,6 +156,7 @@ class MenuCategory {
     return {
       'id': id,
       'name': name,
+      'image': image,
       'items': items.map((item) => item.toJson()).toList(),
     };
   }

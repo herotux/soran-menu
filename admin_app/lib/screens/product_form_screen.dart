@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/menu_models.dart';
+import '../services/github_service.dart';
 
 class ProductFormResult {
   final MenuItemModel item;
@@ -31,6 +35,7 @@ class ProductFormScreen extends StatefulWidget {
 
 class _ProductFormScreenState extends State<ProductFormScreen> {
   final formKey = GlobalKey<FormState>();
+  final ImagePicker picker = ImagePicker();
 
   late final TextEditingController name;
   late final TextEditingController description;
@@ -39,6 +44,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
   late bool available;
   String? categoryId;
+
+  XFile? selectedImage;
+  String imagePath = '';
+  bool uploadingImage = false;
+  bool saving = false;
 
   @override
   void initState() {
@@ -63,6 +73,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     );
 
     available = item?.available ?? true;
+    imagePath = item?.image ?? '';
 
     categoryId = widget.initialCategoryId;
 
@@ -80,7 +91,70 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     super.dispose();
   }
 
-  void save() {
+  Future<void> pickImage() async {
+    try {
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        selectedImage = image;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('انتخاب عکس ناموفق بود:\n$e'),
+        ),
+      );
+    }
+  }
+
+  Future<String?> uploadSelectedImage() async {
+    final image = selectedImage;
+
+    if (image == null) {
+      return imagePath;
+    }
+
+    setState(() {
+      uploadingImage = true;
+    });
+
+    try {
+      final bytes = await image.readAsBytes();
+
+      final extension = image.name.contains('.')
+          ? image.name.split('.').last.toLowerCase()
+          : 'jpg';
+
+      final id = widget.item?.id ?? const Uuid().v4();
+
+      final fileName = '$id.$extension';
+
+      final uploadedPath = await GitHubService.uploadImage(
+        fileName: fileName,
+        bytes: bytes,
+      );
+
+      imagePath = uploadedPath;
+
+      return uploadedPath;
+    } finally {
+      if (mounted) {
+        setState(() {
+          uploadingImage = false;
+        });
+      }
+    }
+  }
+
+  Future<void> save() async {
     if (!formKey.currentState!.validate()) {
       return;
     }
@@ -116,22 +190,106 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       return;
     }
 
-    final result = ProductFormResult(
-      categoryId: categoryId!,
-      item: MenuItemModel(
-        id: widget.item?.id ?? const Uuid().v4(),
-        name: name.text.trim(),
-        description: description.text.trim(),
-        price: parsedPrice,
-        oldPrice: parsedOldPrice,
-        image: widget.item?.image ?? '',
-        available: available,
-      ),
-    );
+    setState(() {
+      saving = true;
+    });
 
-    Navigator.pop(
-      context,
-      result,
+    try {
+      final finalImagePath = await uploadSelectedImage();
+
+      final result = ProductFormResult(
+        categoryId: categoryId!,
+        item: MenuItemModel(
+          id: widget.item?.id ?? const Uuid().v4(),
+          name: name.text.trim(),
+          description: description.text.trim(),
+          price: parsedPrice,
+          oldPrice: parsedOldPrice,
+          image: finalImagePath ?? '',
+          available: available,
+        ),
+      );
+
+      if (!mounted) return;
+
+      Navigator.pop(
+        context,
+        result,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('آپلود عکس ناموفق بود:\n$e'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          saving = false;
+        });
+      }
+    }
+  }
+
+  Widget buildImagePreview() {
+    if (selectedImage != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          FileImage(
+            selectedImage!,
+          ).file,
+          height: 220,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    if (imagePath.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          imagePath,
+          height: 220,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) {
+            return Container(
+              height: 220,
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.broken_image,
+                size: 64,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.image_outlined,
+            size: 56,
+          ),
+          SizedBox(height: 8),
+          Text('عکسی انتخاب نشده است'),
+        ],
+      ),
     );
   }
 
@@ -178,7 +336,36 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 14),
+
+            const SizedBox(height: 20),
+
+            const Text(
+              'عکس محصول',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            buildImagePreview(),
+
+            const SizedBox(height: 12),
+
+            OutlinedButton.icon(
+              onPressed: uploadingImage || saving
+                  ? null
+                  : pickImage,
+              icon: const Icon(Icons.photo_library),
+              label: const Padding(
+                padding: EdgeInsets.all(10),
+                child: Text('انتخاب عکس از گالری'),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             TextFormField(
               controller: name,
               decoration: const InputDecoration(
@@ -192,7 +379,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 return null;
               },
             ),
+
             const SizedBox(height: 14),
+
             TextFormField(
               controller: description,
               maxLines: 4,
@@ -201,7 +390,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 14),
+
             TextFormField(
               controller: price,
               keyboardType: TextInputType.number,
@@ -221,7 +412,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 return null;
               },
             ),
+
             const SizedBox(height: 14),
+
             TextFormField(
               controller: oldPrice,
               keyboardType: TextInputType.number,
@@ -230,7 +423,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 8),
+
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('محصول موجود است'),
@@ -246,13 +441,29 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 });
               },
             ),
+
             const SizedBox(height: 18),
+
             FilledButton.icon(
-              onPressed: save,
-              icon: const Icon(Icons.save),
-              label: const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text('ذخیره محصول'),
+              onPressed: saving ? null : save,
+              icon: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save),
+              label: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  saving
+                      ? uploadingImage
+                          ? 'در حال آپلود عکس...'
+                          : 'در حال ذخیره...'
+                      : 'ذخیره محصول',
+                ),
               ),
             ),
           ],

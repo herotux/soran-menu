@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/menu_models.dart';
+import '../services/github_service.dart';
 import '../services/menu_repository.dart';
 
 class RestaurantSettingsScreen extends StatefulWidget {
@@ -21,6 +25,7 @@ class RestaurantSettingsScreen extends StatefulWidget {
 class _RestaurantSettingsScreenState
     extends State<RestaurantSettingsScreen> {
   final formKey = GlobalKey<FormState>();
+  final ImagePicker picker = ImagePicker();
 
   late final TextEditingController nameController;
   late final TextEditingController descriptionController;
@@ -29,9 +34,12 @@ class _RestaurantSettingsScreenState
   late final TextEditingController addressController;
   late final TextEditingController instagramController;
   late final TextEditingController telegramController;
-  late final TextEditingController logoController;
+
+  XFile? selectedLogo;
+  late String logoPath;
 
   bool saving = false;
+  bool uploadingLogo = false;
 
   @override
   void initState() {
@@ -49,7 +57,8 @@ class _RestaurantSettingsScreenState
         TextEditingController(text: restaurant.instagram);
     telegramController =
         TextEditingController(text: restaurant.telegram);
-    logoController = TextEditingController(text: restaurant.logo);
+
+    logoPath = restaurant.logo;
   }
 
   @override
@@ -61,7 +70,6 @@ class _RestaurantSettingsScreenState
     addressController.dispose();
     instagramController.dispose();
     telegramController.dispose();
-    logoController.dispose();
     super.dispose();
   }
 
@@ -76,6 +84,118 @@ class _RestaurantSettingsScreenState
     );
   }
 
+  Future<void> _pickLogo() async {
+    try {
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+        maxWidth: 1600,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        selectedLogo = image;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('انتخاب لوگو ناموفق بود:\n$e'),
+        ),
+      );
+    }
+  }
+
+  Future<String> _uploadLogo() async {
+    final image = selectedLogo;
+
+    if (image == null) {
+      return logoPath;
+    }
+
+    setState(() {
+      uploadingLogo = true;
+    });
+
+    try {
+      final bytes = await image.readAsBytes();
+
+      final extension = image.name.contains('.')
+          ? image.name.split('.').last.toLowerCase()
+          : 'jpg';
+
+      final uploadedPath = await GitHubService.uploadImage(
+        fileName: 'restaurant_logo.$extension',
+        bytes: bytes,
+      );
+
+      return uploadedPath;
+    } finally {
+      if (mounted) {
+        setState(() {
+          uploadingLogo = false;
+        });
+      }
+    }
+  }
+
+  Widget _logoPreview() {
+    if (selectedLogo != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.file(
+          File(selectedLogo!.path),
+          width: 180,
+          height: 180,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    if (logoPath.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          logoPath,
+          width: 180,
+          height: 180,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) {
+            return Container(
+              width: 180,
+              height: 180,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.broken_image_outlined,
+                size: 56,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return Container(
+      width: 180,
+      height: 180,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(
+        Icons.restaurant,
+        size: 64,
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (!formKey.currentState!.validate()) return;
 
@@ -86,6 +206,8 @@ class _RestaurantSettingsScreenState
     try {
       final restaurant = widget.menu.restaurant;
 
+      final finalLogo = await _uploadLogo();
+
       restaurant.name = nameController.text.trim();
       restaurant.description = descriptionController.text.trim();
       restaurant.phone = phoneController.text.trim();
@@ -93,7 +215,7 @@ class _RestaurantSettingsScreenState
       restaurant.address = addressController.text.trim();
       restaurant.instagram = instagramController.text.trim();
       restaurant.telegram = telegramController.text.trim();
-      restaurant.logo = logoController.text.trim();
+      restaurant.logo = finalLogo;
 
       await widget.repository.save(widget.menu);
 
@@ -111,7 +233,9 @@ class _RestaurantSettingsScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('خطا در ذخیره اطلاعات رستوران:\n$e'),
+          content: Text(
+            'خطا در ذخیره اطلاعات رستوران:\n$e',
+          ),
         ),
       );
     } finally {
@@ -149,6 +273,24 @@ class _RestaurantSettingsScreenState
               const Text(
                 'این اطلاعات مستقیماً در menu.json ذخیره می‌شوند.',
                 style: TextStyle(color: Colors.grey),
+              ),
+
+              const SizedBox(height: 24),
+
+              Center(
+                child: _logoPreview(),
+              ),
+
+              const SizedBox(height: 14),
+
+              Center(
+                child: OutlinedButton.icon(
+                  onPressed: saving || uploadingLogo
+                      ? null
+                      : _pickLogo,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('انتخاب لوگوی رستوران'),
+                ),
               ),
 
               const SizedBox(height: 24),
@@ -215,17 +357,6 @@ class _RestaurantSettingsScreenState
                 decoration: decoration(
                   'Telegram',
                   hint: 'https://t.me/...',
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              TextFormField(
-                controller: logoController,
-                textDirection: TextDirection.ltr,
-                decoration: decoration(
-                  'آدرس لوگو',
-                  hint: 'مسیر یا URL لوگو',
                 ),
               ),
 

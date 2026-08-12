@@ -1,6 +1,11 @@
+import 'package:image_picker/image_picker.dart';
+import '../services/github_service.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../models/menu_models.dart';
+import '../widgets/remote_image.dart';
 import '../services/menu_repository.dart';
 import '../services/app_settings.dart';
 import 'setup_screen.dart';
@@ -214,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final id = result['id']!.trim();
     final name = result['name']!.trim();
+    final image = result['image']?.trim() ?? '';
 
     if (menu!.categories.any((c) => c.id == id)) {
       _showMessage('این شناسه دسته قبلاً وجود دارد.');
@@ -225,6 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
         MenuCategory(
           id: id,
           name: name,
+          image: image,
           items: [],
         ),
       );
@@ -246,6 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
         confirmText: 'ذخیره',
         initialId: category.id,
         initialName: category.name,
+        initialImage: category.image,
         allowIdEdit: false,
       ),
     );
@@ -254,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       category.name = result['name']!.trim();
+      category.image = result['image']?.trim() ?? '';
     });
 
     try {
@@ -489,9 +498,19 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 28,
-              child: Icon(Icons.restaurant),
+              child: restaurant.logo.trim().isNotEmpty
+                  ? ClipOval(
+                      child: RemoteImage(
+                        path: restaurant.logo,
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        error: const Icon(Icons.restaurant),
+                      ),
+                    )
+                  : const Icon(Icons.restaurant),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -554,11 +573,41 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       child: ExpansionTile(
         initiallyExpanded: true,
-        title: Text(
-          category.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            if (category.image.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: RemoteImage(
+                  path: category.image,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  error: const Icon(
+                    Icons.category_outlined,
+                    size: 40,
+                  ),
+                ),
+              )
+            else
+              const SizedBox(
+                width: 48,
+                height: 48,
+                child: Icon(
+                  Icons.category_outlined,
+                  size: 32,
+                ),
+              ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                category.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
         subtitle: Text(
           '${category.items.length} محصول',
@@ -618,13 +667,30 @@ class _HomeScreenState extends State<HomeScreen> {
         horizontal: 16,
         vertical: 4,
       ),
-      leading: CircleAvatar(
-        child: Icon(
-          item.available
-              ? Icons.fastfood
-              : Icons.visibility_off_outlined,
-        ),
-      ),
+      leading: item.image.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: RemoteImage(
+                path: item.image,
+                width: 58,
+                height: 58,
+                fit: BoxFit.cover,
+                error: CircleAvatar(
+                  child: Icon(
+                    item.available
+                        ? Icons.fastfood
+                        : Icons.visibility_off_outlined,
+                  ),
+                ),
+              ),
+            )
+          : CircleAvatar(
+              child: Icon(
+                item.available
+                    ? Icons.fastfood
+                    : Icons.visibility_off_outlined,
+              ),
+            ),
       title: Text(
         item.name,
         style: TextStyle(
@@ -694,16 +760,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CategoryDialog extends StatefulWidget {
+    class _CategoryDialog extends StatefulWidget {
   final String title;
   final String confirmText;
   final String initialId;
   final String initialName;
+  final String initialImage;
   final bool allowIdEdit;
 
   const _CategoryDialog({
@@ -711,6 +773,7 @@ class _CategoryDialog extends StatefulWidget {
     required this.confirmText,
     this.initialId = '',
     this.initialName = '',
+    this.initialImage = '',
     this.allowIdEdit = true,
   });
 
@@ -721,6 +784,13 @@ class _CategoryDialog extends StatefulWidget {
 class _CategoryDialogState extends State<_CategoryDialog> {
   late final TextEditingController idController;
   late final TextEditingController nameController;
+
+  final ImagePicker picker = ImagePicker();
+
+  XFile? selectedImage;
+  late String imagePath;
+
+  bool uploading = false;
 
   @override
   void initState() {
@@ -733,6 +803,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     nameController = TextEditingController(
       text: widget.initialName,
     );
+
+    imagePath = widget.initialImage;
   }
 
   @override
@@ -742,24 +814,159 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     super.dispose();
   }
 
-  void submit() {
+  Future<void> pickImage() async {
+    try {
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        selectedImage = image;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('انتخاب عکس ناموفق بود:\n$e'),
+        ),
+      );
+    }
+  }
+
+  Future<String> uploadImage() async {
+    if (selectedImage == null) {
+      return imagePath;
+    }
+
+    setState(() {
+      uploading = true;
+    });
+
+    try {
+      final bytes = await selectedImage!.readAsBytes();
+
+      final id = idController.text.trim();
+
+      final extension = selectedImage!.name.contains('.')
+          ? selectedImage!.name.split('.').last.toLowerCase()
+          : 'jpg';
+
+      final fileName = 'category_$id.$extension';
+
+      return await GitHubService.uploadImage(
+        fileName: fileName,
+        bytes: bytes,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          uploading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> submit() async {
     final id = idController.text.trim();
     final name = nameController.text.trim();
 
     if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('نام دسته را وارد کنید'),
+        ),
+      );
       return;
     }
 
     if (widget.allowIdEdit && id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('شناسه دسته را وارد کنید'),
+        ),
+      );
       return;
     }
 
-    Navigator.pop(
-      context,
-      {
-        'id': id,
-        'name': name,
-      },
+    setState(() {
+      uploading = true;
+    });
+
+    try {
+      final finalImage = await uploadImage();
+
+      if (!mounted) return;
+
+      Navigator.pop(
+        context,
+        {
+          'id': id,
+          'name': name,
+          'image': finalImage,
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('آپلود عکس ناموفق بود:\n$e'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          uploading = false;
+        });
+      }
+    }
+  }
+
+  Widget imagePreview() {
+    if (selectedImage != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          File(selectedImage!.path),
+          height: 150,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    if (imagePath.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: RemoteImage(
+          path: imagePath,
+          height: 150,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          error: const Icon(
+            Icons.broken_image,
+            size: 48,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 130,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(
+        Icons.image_outlined,
+        size: 48,
+      ),
     );
   }
 
@@ -767,39 +974,61 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'نام دسته',
-              hintText: 'مثلاً پیتزا',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          if (widget.allowIdEdit) ...[
-            const SizedBox(height: 14),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             TextField(
-              controller: idController,
+              controller: nameController,
+              autofocus: true,
               decoration: const InputDecoration(
-                labelText: 'شناسه دسته',
-                hintText: 'مثلاً pizza',
+                labelText: 'نام دسته',
+                hintText: 'مثلاً پیتزا',
                 border: OutlineInputBorder(),
               ),
             ),
+
+            if (widget.allowIdEdit) ...[
+              const SizedBox(height: 14),
+
+              TextField(
+                controller: idController,
+                decoration: const InputDecoration(
+                  labelText: 'شناسه دسته',
+                  hintText: 'مثلاً pizza',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 18),
+
+            imagePreview(),
+
+            const SizedBox(height: 10),
+
+            OutlinedButton.icon(
+              onPressed: uploading ? null : pickImage,
+              icon: const Icon(Icons.photo_library),
+              label: const Text('انتخاب عکس دسته'),
+            ),
           ],
-        ],
+        ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: uploading
+              ? null
+              : () => Navigator.pop(context),
           child: const Text('لغو'),
         ),
         FilledButton(
-          onPressed: submit,
-          child: Text(widget.confirmText),
+          onPressed: uploading ? null : submit,
+          child: Text(
+            uploading
+                ? 'در حال آپلود...'
+                : widget.confirmText,
+          ),
         ),
       ],
     );
