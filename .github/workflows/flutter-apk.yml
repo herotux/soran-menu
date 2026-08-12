@@ -41,6 +41,9 @@ jobs:
 
           cp admin_app/pubspec.yaml build_app/pubspec.yaml
 
+      - name: Remove generated example test
+        run: rm -rf build_app/test
+
       - name: Install dependencies
         working-directory: build_app
         run: flutter pub get

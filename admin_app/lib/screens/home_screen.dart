@@ -471,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (item.oldPrice != null) ...[
                 const SizedBox(width: 8),
                 Text(
-                  '${_formatPrice(item.oldPrice!)}',
+                  _formatPrice(item.oldPrice!),
                   style: TextStyle(
                     color: Colors.grey.shade600,
                     decoration:
