@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/menu_models.dart';
 import '../services/menu_repository.dart';
 import 'product_form_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -325,6 +326,18 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('مدیریت منو'),
         actions: [
+          IconButton(
+            tooltip: 'تنظیمات',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.settings),
+          ),
           IconButton(
             tooltip: 'بارگذاری مجدد',
             onPressed: _load,
