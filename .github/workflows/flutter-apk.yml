@@ -62,6 +62,26 @@ jobs:
 
           cp admin_app/pubspec.yaml build_app/pubspec.yaml
 
+      - name: Configure Android Internet permission
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("build_app/android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+
+          permission = '<uses-permission android:name="android.permission.INTERNET"/>'
+
+          if permission not in s:
+              s = s.replace(
+                  '<application',
+                  permission + '\n    <application',
+                  1
+              )
+
+          p.write_text(s)
+          PY
+
       - name: Remove generated example test
         run: rm -rf build_app/test
 
