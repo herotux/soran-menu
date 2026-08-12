@@ -238,9 +238,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Image.file(
-          FileImage(
-            selectedImage!,
-          ).file,
+          File(
+            selectedImage!.path,
+          ),
           height: 220,
           width: double.infinity,
           fit: BoxFit.cover,

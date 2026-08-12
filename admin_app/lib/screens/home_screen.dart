@@ -760,7 +760,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
-    class _CategoryDialog extends StatefulWidget {
+      ),
+    );
+  }
+}
+
+class _CategoryDialog extends StatefulWidget {
   final String title;
   final String confirmText;
   final String initialId;
