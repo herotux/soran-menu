@@ -1,0 +1,61 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'admin_app/**'
+      - '.github/workflows/flutter-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+          channel: stable
+          cache: true
+
+      - name: Create Flutter Android project
+        run: |
+          flutter create \
+            --platforms=android \
+            --org=com.herotux \
+            --project-name=menu_admin \
+            build_app
+
+      - name: Copy admin app source
+        run: |
+          rm -rf build_app/lib
+          cp -r admin_app/lib build_app/lib
+
+          cp admin_app/pubspec.yaml build_app/pubspec.yaml
+
+      - name: Install dependencies
+        working-directory: build_app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: build_app
+        run: flutter analyze
+
+      - name: Build release APK
+        working-directory: build_app
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: soran-menu-admin-apk
+          path: build_app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
