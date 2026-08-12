@@ -76,7 +76,12 @@ class _HomeScreenState extends State<HomeScreen> {
       category.items.add(result.item);
     });
 
-    _showMessage('محصول به «${category.name}» اضافه شد.');
+    try {
+      await repo.save(currentMenu);
+      _showMessage('محصول به «${category.name}» اضافه و در GitHub ذخیره شد.');
+    } catch (e) {
+      _showMessage('محصول اضافه شد ولی ذخیره در GitHub ناموفق بود: $e');
+    }
   }
 
   Future<void> _editProduct(
@@ -111,7 +116,12 @@ class _HomeScreenState extends State<HomeScreen> {
       targetCategory.items.add(result.item);
     });
 
-    _showMessage('محصول ذخیره شد.');
+    try {
+      await repo.save(currentMenu);
+      _showMessage('محصول ویرایش و در GitHub ذخیره شد.');
+    } catch (e) {
+      _showMessage('تغییر اعمال شد ولی ذخیره در GitHub ناموفق بود: $e');
+    }
   }
 
   Future<void> _deleteProduct(
@@ -146,7 +156,15 @@ class _HomeScreenState extends State<HomeScreen> {
       category.items.removeAt(index);
     });
 
-    _showMessage('محصول حذف شد.');
+    final currentMenu = menu;
+    if (currentMenu == null) return;
+
+    try {
+      await repo.save(currentMenu);
+      _showMessage('محصول حذف و در GitHub ذخیره شد.');
+    } catch (e) {
+      _showMessage('محصول حذف شد ولی ذخیره در GitHub ناموفق بود: $e');
+    }
   }
 
   Future<void> _addCategory() async {
@@ -178,7 +196,12 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     });
 
-    _showMessage('دسته «$name» ایجاد شد.');
+    try {
+      await repo.save(menu!);
+      _showMessage('دسته «$name» ایجاد و در GitHub ذخیره شد.');
+    } catch (e) {
+      _showMessage('دسته ایجاد شد ولی ذخیره در GitHub ناموفق بود: $e');
+    }
   }
 
   Future<void> _editCategory(MenuCategory category) async {
@@ -199,7 +222,12 @@ class _HomeScreenState extends State<HomeScreen> {
       category.name = result['name']!.trim();
     });
 
-    _showMessage('دسته ویرایش شد.');
+    try {
+      await repo.save(menu!);
+      _showMessage('دسته ویرایش و در GitHub ذخیره شد.');
+    } catch (e) {
+      _showMessage('تغییر اعمال شد ولی ذخیره در GitHub ناموفق بود: $e');
+    }
   }
 
   Future<void> _deleteCategory(MenuCategory category) async {
@@ -242,7 +270,12 @@ class _HomeScreenState extends State<HomeScreen> {
       currentMenu.categories.remove(category);
     });
 
-    _showMessage('دسته حذف شد.');
+    try {
+      await repo.save(currentMenu);
+      _showMessage('دسته حذف و در GitHub ذخیره شد.');
+    } catch (e) {
+      _showMessage('دسته حذف شد ولی ذخیره در GitHub ناموفق بود: $e');
+    }
   }
 
   void _showMessage(String message) {
@@ -329,12 +362,16 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             tooltip: 'تنظیمات',
             onPressed: () async {
-              await Navigator.push(
+              final changed = await Navigator.push<bool>(
                 context,
                 MaterialPageRoute(
                   builder: (_) => const SettingsScreen(),
                 ),
               );
+
+              if (changed == true && mounted) {
+                await _load();
+              }
             },
             icon: const Icon(Icons.settings),
           ),
