@@ -63,6 +63,15 @@
           "oldPrice": 300,
           "image": "/images/1711576987503.jpeg",
           "available": true
+        },
+        {
+          "id": "716f28d5-157a-4f2b-b8e9-19277ffab30d",
+          "name": "سیب سوخته",
+          "description": "الکی",
+          "price": 100,
+          "oldPrice": null,
+          "image": "",
+          "available": true
         }
       ]
     },
