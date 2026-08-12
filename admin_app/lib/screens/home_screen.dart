@@ -578,7 +578,15 @@ class _HomeScreenState extends State<HomeScreen> {
         key: PageStorageKey<String>(
           'expansion_${category.id}',
         ),
-        initiallyExpanded: true,
+        initiallyExpanded: _expandedCategories.contains(category.id),
+        maintainState: true,
+        onExpansionChanged: (value) {
+          if (value) {
+            _expandedCategories.add(category.id);
+          } else {
+            _expandedCategories.remove(category.id);
+          }
+        },
         maintainState: true,
         title: Row(
           children: [
