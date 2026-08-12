@@ -435,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
 
               if (result == true && mounted) {
-                setState(() {});
+                await _load();
               }
             },
             icon: const Icon(Icons.restaurant),
@@ -569,10 +569,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategory(MenuCategory category) {
+    final expanded =
+        _expandedCategories[category.id] ?? true;
+
     return Card(
+      key: PageStorageKey<String>('category_${category.id}'),
       margin: const EdgeInsets.only(bottom: 10),
       child: ExpansionTile(
-        initiallyExpanded: true,
+        key: PageStorageKey<String>(
+          'expansion_${category.id}',
+        ),
+        initiallyExpanded: expanded,
+        onExpansionChanged: (value) {
+          _expandedCategories[category.id] = value;
+        },
         title: Row(
           children: [
             if (category.image.isNotEmpty)
