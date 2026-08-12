@@ -34,6 +34,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Prepare menu JSON
+        run: |
+          mkdir -p public/data
+          cp src/data/menu.json public/data/menu.json
+
       - name: Build
         run: npm run build
 
