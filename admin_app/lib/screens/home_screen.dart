@@ -21,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final Set<String> _expandedCategories = <String>{};
 
 
   final MenuRepository repo = RemoteMenuRepository();
@@ -587,7 +588,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _expandedCategories.remove(category.id);
           }
         },
-        maintainState: true,
         title: Row(
           children: [
             if (category.image.isNotEmpty)
