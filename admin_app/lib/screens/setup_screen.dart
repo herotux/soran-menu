@@ -60,11 +60,7 @@ class _SetupScreenState extends State<SetupScreen> {
         token: token.text,
       );
 
-      // First verify that the real menu.json can be read.
-      final repository = RemoteMenuRepository();
-      await repository.load();
-
-      // Only save GitHub settings after the repository was successfully read.
+      // Save GitHub settings after the direct connection test succeeds.
       await AppSettings.save(
         owner: owner.text.trim(),
         repo: repo.text.trim(),
@@ -73,6 +69,10 @@ class _SetupScreenState extends State<SetupScreen> {
         siteUrl: '',
         token: token.text.trim(),
       );
+
+      // Now load the real menu using the saved GitHub settings.
+      final repository = RemoteMenuRepository();
+      await repository.load();
 
       if (!mounted) return;
 
