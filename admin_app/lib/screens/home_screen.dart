@@ -16,6 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   MenuData? menu;
   bool loading = true;
+  String? error;
 
   @override
   void initState() {
@@ -24,6 +25,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
     try {
       final data = await repo.load();
 
@@ -38,62 +44,73 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         loading = false;
+        error = e.toString();
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطا در بارگذاری منو: $e'),
-        ),
-      );
     }
   }
 
-  int get totalProducts {
-    if (menu == null) return 0;
+  Future<void> _addProduct() async {
+    final currentMenu = menu;
+    if (currentMenu == null || currentMenu.categories.isEmpty) {
+      _showMessage('ابتدا حداقل یک دسته ایجاد کنید.');
+      return;
+    }
 
-    return menu!.categories.fold(
-      0,
-      (total, category) => total + category.items.length,
-    );
-  }
-
-  Future<void> _addProduct(MenuCategory category) async {
-    final item = await Navigator.push<MenuItemModel>(
+    final result = await Navigator.push<ProductFormResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => const ProductFormScreen(),
+        builder: (_) => ProductFormScreen(
+          categories: currentMenu.categories,
+        ),
       ),
     );
 
-    if (item == null || menu == null) return;
+    if (result == null || !mounted) return;
+
+    final category = currentMenu.categories.firstWhere(
+      (c) => c.id == result.categoryId,
+    );
 
     setState(() {
-      category.items.add(item);
+      category.items.add(result.item);
     });
 
-    await repo.save(menu!);
+    _showMessage('محصول به «${category.name}» اضافه شد.');
   }
 
   Future<void> _editProduct(
     MenuCategory category,
     int index,
   ) async {
-    final result = await Navigator.push<MenuItemModel>(
+    final currentMenu = menu;
+    if (currentMenu == null) return;
+
+    final oldItem = category.items[index];
+
+    final result = await Navigator.push<ProductFormResult>(
       context,
       MaterialPageRoute(
         builder: (_) => ProductFormScreen(
-          item: category.items[index],
+          item: oldItem,
+          initialCategoryId: category.id,
+          categories: currentMenu.categories,
         ),
       ),
     );
 
-    if (result == null || menu == null) return;
+    if (result == null || !mounted) return;
 
     setState(() {
-      category.items[index] = result;
+      category.items.removeAt(index);
+
+      final targetCategory = currentMenu.categories.firstWhere(
+        (c) => c.id == result.categoryId,
+      );
+
+      targetCategory.items.add(result.item);
     });
 
-    await repo.save(menu!);
+    _showMessage('محصول ذخیره شد.');
   }
 
   Future<void> _deleteProduct(
@@ -102,65 +119,149 @@ class _HomeScreenState extends State<HomeScreen> {
   ) async {
     final item = category.items[index];
 
-    final confirmed = await showDialog<bool>(
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text('حذف محصول'),
-          content: Text(
-            'آیا «${item.name}» حذف شود؟',
+      builder: (_) => AlertDialog(
+        title: const Text('حذف محصول'),
+        content: Text(
+          'آیا محصول «${item.name}» حذف شود؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('لغو'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, false);
-              },
-              child: const Text('لغو'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context, true);
-              },
-              child: const Text('حذف'),
-            ),
-          ],
-        );
-      },
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
     );
 
-    if (confirmed != true || menu == null) return;
+    if (ok != true || !mounted) return;
 
     setState(() {
       category.items.removeAt(index);
     });
 
-    await repo.save(menu!);
+    _showMessage('محصول حذف شد.');
   }
 
-  Future<void> _toggleAvailability(
-    MenuCategory category,
-    int index,
-  ) async {
-    if (menu == null) return;
+  Future<void> _addCategory() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => const _CategoryDialog(
+        title: 'افزودن دسته',
+        confirmText: 'ایجاد دسته',
+      ),
+    );
+
+    if (result == null || !mounted || menu == null) return;
+
+    final id = result['id']!.trim();
+    final name = result['name']!.trim();
+
+    if (menu!.categories.any((c) => c.id == id)) {
+      _showMessage('این شناسه دسته قبلاً وجود دارد.');
+      return;
+    }
 
     setState(() {
-      category.items[index].available =
-          !category.items[index].available;
+      menu!.categories.add(
+        MenuCategory(
+          id: id,
+          name: name,
+          items: [],
+        ),
+      );
     });
 
-    await repo.save(menu!);
+    _showMessage('دسته «$name» ایجاد شد.');
+  }
+
+  Future<void> _editCategory(MenuCategory category) async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => _CategoryDialog(
+        title: 'ویرایش دسته',
+        confirmText: 'ذخیره',
+        initialId: category.id,
+        initialName: category.name,
+        allowIdEdit: false,
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    setState(() {
+      category.name = result['name']!.trim();
+    });
+
+    _showMessage('دسته ویرایش شد.');
+  }
+
+  Future<void> _deleteCategory(MenuCategory category) async {
+    final currentMenu = menu;
+    if (currentMenu == null) return;
+
+    String message;
+
+    if (category.items.isEmpty) {
+      message =
+          'دسته «${category.name}» خالی است.\nآیا حذف شود؟';
+    } else {
+      message =
+          'دسته «${category.name}» شامل ${category.items.length} محصول است.\n'
+          'با حذف دسته، محصولات آن نیز از منوی فعلی حذف می‌شوند.\n\n'
+          'آیا مطمئن هستید؟';
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('حذف دسته'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('لغو'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+
+    setState(() {
+      currentMenu.categories.remove(category);
+    });
+
+    _showMessage('دسته حذف شد.');
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message)),
+      );
   }
 
   String _formatPrice(int price) {
     final value = price.toString();
-
     final buffer = StringBuffer();
 
-    for (int i = 0; i < value.length; i++) {
+    for (var i = 0; i < value.length; i++) {
       if (i > 0 && (value.length - i) % 3 == 0) {
         buffer.write(',');
       }
-
       buffer.write(value[i]);
     }
 
@@ -169,95 +270,114 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
+    if (loading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return Scaffold(
         appBar: AppBar(
           title: const Text('مدیریت منو'),
-          centerTitle: false,
-          actions: [
-            IconButton(
-              tooltip: 'بازخوانی',
-              onPressed: loading ? null : _load,
-              icon: const Icon(Icons.refresh),
-            ),
-            IconButton(
-              tooltip: 'تنظیمات',
-              onPressed: () {},
-              icon: const Icon(Icons.settings_outlined),
-            ),
-          ],
         ),
-        floatingActionButton: menu == null ||
-                menu!.categories.isEmpty
-            ? null
-            : FloatingActionButton.extended(
-                onPressed: () {
-                  _addProduct(menu!.categories.first);
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('محصول جدید'),
-              ),
-        body: loading
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
-            : menu == null
-                ? _buildErrorState()
-                : _buildContent(),
-      ),
-    );
-  }
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.cloud_off,
+                  size: 56,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'خطا در بارگذاری منو',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  error!,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('تلاش مجدد'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            size: 56,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'بارگذاری منو انجام نشد',
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
+    final currentMenu = menu!;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('مدیریت منو'),
+        actions: [
+          IconButton(
+            tooltip: 'بارگذاری مجدد',
             onPressed: _load,
             icon: const Icon(Icons.refresh),
-            label: const Text('تلاش مجدد'),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildContent() {
-    final restaurant = menu!.restaurant;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        12,
-        12,
-        12,
-        100,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addProduct,
+        icon: const Icon(Icons.add),
+        label: const Text('محصول جدید'),
       ),
-      children: [
-        _buildRestaurantCard(restaurant),
-        const SizedBox(height: 12),
-        _buildStatistics(),
-        const SizedBox(height: 12),
-        ...menu!.categories.map(
-          (category) => _buildCategoryCard(category),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
+          children: [
+            _buildRestaurantCard(currentMenu.restaurant),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'دسته‌بندی‌ها',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _addCategory,
+                  icon: const Icon(Icons.create_new_folder_outlined),
+                  label: const Text('دسته جدید'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (currentMenu.categories.isEmpty)
+              _buildEmptyCategories()
+            else
+              ...currentMenu.categories.map(
+                (category) => _buildCategory(category),
+              ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildRestaurantCard(
-    Restaurant restaurant,
-  ) {
+  Widget _buildRestaurantCard(Restaurant restaurant) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -265,31 +385,28 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const CircleAvatar(
               radius: 28,
-              child: Icon(
-                Icons.restaurant,
-                size: 30,
-              ),
+              child: Icon(Icons.restaurant),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     restaurant.name,
                     style: const TextStyle(
-                      fontSize: 19,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    restaurant.description,
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
+                  if (restaurant.description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      restaurant.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -299,68 +416,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatistics() {
-    return Row(
-      children: [
-        Expanded(
-          child: _statCard(
-            icon: Icons.category_outlined,
-            title: 'دسته‌ها',
-            value: menu!.categories.length.toString(),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _statCard(
-            icon: Icons.fastfood_outlined,
-            title: 'محصولات',
-            value: totalProducts.toString(),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _statCard(
-            icon: Icons.check_circle_outline,
-            title: 'فعال',
-            value: menu!.categories
-                .expand((category) => category.items)
-                .where((item) => item.available)
-                .length
-                .toString(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _statCard({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
+  Widget _buildEmptyCategories() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 14,
-          horizontal: 8,
-        ),
+        padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(icon),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            const Icon(
+              Icons.category_outlined,
+              size: 56,
             ),
-            const SizedBox(height: 3),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-              ),
+            const SizedBox(height: 12),
+            const Text(
+              'هنوز دسته‌ای وجود ندارد.',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _addCategory,
+              icon: const Icon(Icons.add),
+              label: const Text('افزودن دسته'),
             ),
           ],
         ),
@@ -368,55 +443,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryCard(
-    MenuCategory category,
-  ) {
+  Widget _buildCategory(MenuCategory category) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       child: ExpansionTile(
         initiallyExpanded: true,
         title: Text(
           category.name,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 17,
           ),
         ),
         subtitle: Text(
           '${category.items.length} محصول',
         ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'edit') {
+              _editCategory(category);
+            } else if (value == 'delete') {
+              _deleteCategory(category);
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'edit',
+              child: ListTile(
+                leading: Icon(Icons.edit_outlined),
+                title: Text('ویرایش دسته'),
+              ),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: ListTile(
+                leading: Icon(Icons.delete_outline),
+                title: Text('حذف دسته'),
+              ),
+            ),
+          ],
+        ),
         children: [
           if (category.items.isEmpty)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Text(
-                'این دسته محصولی ندارد.',
-              ),
-            ),
-          ...List.generate(
-            category.items.length,
-            (index) {
-              return _buildProductTile(
+              child: Text('این دسته محصولی ندارد.'),
+            )
+          else
+            ...List.generate(
+              category.items.length,
+              (index) => _buildProductTile(
                 category,
                 index,
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  _addProduct(category);
-                },
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  'افزودن محصول',
-                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -430,14 +509,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
+        horizontal: 16,
         vertical: 4,
       ),
       leading: CircleAvatar(
         child: Icon(
           item.available
               ? Icons.fastfood
-              : Icons.visibility_off,
+              : Icons.visibility_off_outlined,
         ),
       ),
       title: Text(
@@ -450,16 +529,18 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       subtitle: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (item.description.isNotEmpty)
-            Text(
-              item.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                item.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           Row(
             children: [
               Text(
@@ -471,11 +552,10 @@ class _HomeScreenState extends State<HomeScreen> {
               if (item.oldPrice != null) ...[
                 const SizedBox(width: 8),
                 Text(
-                  _formatPrice(item.oldPrice!),
+                  '${_formatPrice(item.oldPrice!)} تومان',
                   style: TextStyle(
-                    color: Colors.grey.shade600,
-                    decoration:
-                        TextDecoration.lineThrough,
+                    color: Colors.grey.shade500,
+                    decoration: TextDecoration.lineThrough,
                   ),
                 ),
               ],
@@ -483,50 +563,139 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      isThreeLine: true,
       trailing: PopupMenuButton<String>(
         onSelected: (value) {
-          switch (value) {
-            case 'toggle':
-              _toggleAvailability(
-                category,
-                index,
-              );
-              break;
-
-            case 'edit':
-              _editProduct(
-                category,
-                index,
-              );
-              break;
-
-            case 'delete':
-              _deleteProduct(
-                category,
-                index,
-              );
-              break;
+          if (value == 'edit') {
+            _editProduct(category, index);
+          } else if (value == 'delete') {
+            _deleteProduct(category, index);
           }
         },
-        itemBuilder: (_) => [
+        itemBuilder: (_) => const [
           PopupMenuItem(
-            value: 'toggle',
-            child: Text(
-              item.available
-                  ? 'غیرفعال کردن'
-                  : 'فعال کردن',
+            value: 'edit',
+            child: ListTile(
+              leading: Icon(Icons.edit_outlined),
+              title: Text('ویرایش'),
             ),
           ),
-          const PopupMenuItem(
-            value: 'edit',
-            child: Text('ویرایش'),
-          ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'delete',
-            child: Text('حذف'),
+            child: ListTile(
+              leading: Icon(Icons.delete_outline),
+              title: Text('حذف'),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CategoryDialog extends StatefulWidget {
+  final String title;
+  final String confirmText;
+  final String initialId;
+  final String initialName;
+  final bool allowIdEdit;
+
+  const _CategoryDialog({
+    required this.title,
+    required this.confirmText,
+    this.initialId = '',
+    this.initialName = '',
+    this.allowIdEdit = true,
+  });
+
+  @override
+  State<_CategoryDialog> createState() => _CategoryDialogState();
+}
+
+class _CategoryDialogState extends State<_CategoryDialog> {
+  late final TextEditingController idController;
+  late final TextEditingController nameController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    idController = TextEditingController(
+      text: widget.initialId,
+    );
+
+    nameController = TextEditingController(
+      text: widget.initialName,
+    );
+  }
+
+  @override
+  void dispose() {
+    idController.dispose();
+    nameController.dispose();
+    super.dispose();
+  }
+
+  void submit() {
+    final id = idController.text.trim();
+    final name = nameController.text.trim();
+
+    if (name.isEmpty) {
+      return;
+    }
+
+    if (widget.allowIdEdit && id.isEmpty) {
+      return;
+    }
+
+    Navigator.pop(
+      context,
+      {
+        'id': id,
+        'name': name,
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'نام دسته',
+              hintText: 'مثلاً پیتزا',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          if (widget.allowIdEdit) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: idController,
+              decoration: const InputDecoration(
+                labelText: 'شناسه دسته',
+                hintText: 'مثلاً pizza',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('لغو'),
+        ),
+        FilledButton(
+          onPressed: submit,
+          child: Text(widget.confirmText),
+        ),
+      ],
     );
   }
 }
