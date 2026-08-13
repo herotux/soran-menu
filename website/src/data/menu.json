@@ -18,7 +18,7 @@
     {
       "id": "potato",
       "name": "سیب‌زمینی",
-      "image": "",
+      "image": "/images/potato.jpeg",
       "items": [
         {
           "id": "65762",
@@ -79,7 +79,7 @@
     {
       "id": "burger",
       "name": "برگر",
-      "image": "",
+      "image": "/images/burger.jpeg",
       "items": [
         {
           "id": "65653",
@@ -203,7 +203,7 @@
     {
       "id": "sandwich",
       "name": "ساندویچ",
-      "image": "",
+      "image": "/images/sandwich.jpeg",
       "items": [
         {
           "id": "65741",
@@ -237,7 +237,7 @@
     {
       "id": "fried",
       "name": "سوخاری",
-      "image": "",
+      "image": "/images/fried.jpeg",
       "items": [
         {
           "id": "65731",
@@ -271,7 +271,7 @@
     {
       "id": "special",
       "name": "ویژه",
-      "image": "",
+      "image": "/images/special.jpeg",
       "items": [
         {
           "id": "65761",
