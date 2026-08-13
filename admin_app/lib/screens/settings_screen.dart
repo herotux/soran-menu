@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'log_viewer_screen.dart';
 
 import '../services/app_settings.dart';
 import '../services/github_service.dart';
@@ -323,6 +324,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? 'در حال ذخیره...'
                       : 'ذخیره تنظیمات',
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LogViewerScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.article_outlined),
+              label: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('مشاهده لاگ‌های برنامه'),
               ),
             ),
           ],
