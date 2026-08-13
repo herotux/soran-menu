@@ -572,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: SizedBox(
             width: 44,
             height: 44,
-            child: Icon(icon),
+            child: Icon(icon, color: const Color(0xFF202124)),
           ),
         ),
       ),

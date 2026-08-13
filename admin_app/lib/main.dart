@@ -19,7 +19,7 @@ class MenuAdminApp extends StatelessWidget {
         fontFamily: 'Vazir',
         colorSchemeSeed: const Color(0xFF62FF00),
         scaffoldBackgroundColor: const Color(0xFF101010),
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
       ),
       home: const Directionality(
         textDirection: TextDirection.rtl,
