@@ -593,7 +593,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.05),
+            color: Colors.black.withValues(alpha: .05),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
@@ -834,7 +834,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(.04),
+                    color: Colors.black.withValues(alpha: .04),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -973,7 +973,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.035),
+            color: Colors.black.withValues(alpha: .035),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1133,7 +1133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (item.oldPrice != null) ...[
                           const SizedBox(width: 7),
                           Text(
-                            '${_formatPrice(item.oldPrice!)}',
+                            _formatPrice(item.oldPrice!),
                             style: TextStyle(
                               color: Colors.grey.shade500,
                               fontSize: 12,
