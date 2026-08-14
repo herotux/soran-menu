@@ -144,4 +144,86 @@ class GitHubService {
 
     return '/images/$safeFileName';
   }
+
+  static Future<void> deleteImage({
+    required String fileName,
+  }) async {
+    final owner = await AppSettings.getOwner();
+    final repo = await AppSettings.getRepo();
+    final branch = await AppSettings.getBranch();
+    final token = await AppSettings.getToken();
+
+    if (owner.isEmpty ||
+        repo.isEmpty ||
+        branch.isEmpty ||
+        token.isEmpty) {
+      throw Exception('تنظیمات GitHub کامل نیست');
+    }
+
+    final normalizedFileName = fileName
+        .trim()
+        .replaceFirst(RegExp(r'^/images/'), '')
+        .replaceFirst(RegExp(r'^images/'), '');
+
+    final safeFileName = normalizedFileName
+        .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+
+    final path = 'website/public/images/$safeFileName';
+
+    final uri = Uri.parse(
+      '$apiBase/repos/'
+      '${Uri.encodeComponent(owner)}/'
+      '${Uri.encodeComponent(repo)}/'
+      'contents/$path',
+    );
+
+    // ابتدا اطلاعات فایل و SHA آن را می‌گیریم.
+    final existing = await http.get(
+      uri,
+      headers: _headers(token),
+    );
+
+    // اگر فایل از قبل وجود ندارد، کاری لازم نیست.
+    if (existing.statusCode == 404) {
+      return;
+    }
+
+    if (existing.statusCode != 200) {
+      throw Exception(
+        'خطا در بررسی عکس برای حذف: '
+        'HTTP ${existing.statusCode} ${existing.body}',
+      );
+    }
+
+    final data = jsonDecode(existing.body);
+
+    if (data is! Map<String, dynamic>) {
+      throw Exception('پاسخ GitHub برای فایل عکس معتبر نیست');
+    }
+
+    final sha = data['sha']?.toString();
+
+    if (sha == null || sha.isEmpty) {
+      throw Exception('SHA عکس از GitHub دریافت نشد');
+    }
+
+    final body = <String, dynamic>{
+      'message': 'Delete menu image: $safeFileName',
+      'sha': sha,
+      'branch': branch,
+    };
+
+    final response = await http.delete(
+      uri,
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'خطا در حذف عکس: '
+        'HTTP ${response.statusCode} ${response.body}',
+      );
+    }
+  }
 }

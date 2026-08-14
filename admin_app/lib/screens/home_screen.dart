@@ -200,12 +200,19 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final sha = await repo.save(currentMenu);
       await MenuCache.save(currentMenu, sha: sha);
+
       _showMessage(
         'محصول به «${category.name}» اضافه و در GitHub ذخیره شد.',
       );
     } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        category.items.remove(result.item);
+      });
+
       _showMessage(
-        'محصول اضافه شد ولی ذخیره در GitHub ناموفق بود: $e',
+        'افزودن محصول ناموفق بود و تغییرات برگردانده شد.',
       );
     }
   }
@@ -219,6 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (currentMenu == null) return;
 
     final oldItem = category.items[index];
+    final oldImagePath = oldItem.image.trim();
 
     final result = await Navigator.push<ProductFormResult>(
       context,
@@ -232,6 +240,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (result == null || !mounted) return;
+
+    final newImagePath = result.item.image.trim();
 
     setState(() {
       category.items.removeAt(index);
@@ -247,11 +257,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final sha = await repo.save(currentMenu);
-      await MenuCache.save(currentMenu, sha: sha);
+
+      await MenuCache.save(
+        currentMenu,
+        sha: sha,
+      );
+
+      // اگر عکس واقعاً تغییر کرده باشد، عکس قبلی را حذف می‌کنیم.
+      // اگر مسیرها یکی باشند، uploadImage همان فایل را overwrite کرده
+      // و نباید فایل جدید را حذف کنیم.
+      if (oldImagePath.isNotEmpty &&
+          oldImagePath != newImagePath) {
+        try {
+          await GitHubService.deleteImage(
+            fileName: oldImagePath,
+          );
+        } catch (_) {
+          _showMessage(
+            'محصول ذخیره شد، ولی حذف عکس قبلی از GitHub ناموفق بود.',
+          );
+        }
+      }
+
+      if (!mounted) return;
+
       _showMessage('محصول ویرایش و در GitHub ذخیره شد.');
     } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        final targetCategory = currentMenu.categories.firstWhere(
+          (c) => c.id == result.categoryId,
+        );
+
+        targetCategory.items.remove(result.item);
+
+        category.items.insert(
+          index,
+          oldItem,
+        );
+
+        _selectedCategoryId = category.id;
+      });
+
       _showMessage(
-        'تغییر اعمال شد ولی ذخیره در GitHub ناموفق بود: $e',
+        'ویرایش محصول ناموفق بود و تغییرات برگردانده شد.',
       );
     }
   }
@@ -261,6 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int index,
   ) async {
     final item = category.items[index];
+    final imagePath = item.image.trim();
 
     final ok = await showDialog<bool>(
       context: context,
@@ -288,17 +339,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (currentMenu == null) return;
 
+    final oldIndex = index;
+
     setState(() {
-      category.items.removeAt(index);
+      category.items.removeAt(oldIndex);
     });
 
     try {
       final sha = await repo.save(currentMenu);
-      await MenuCache.save(currentMenu, sha: sha);
+
+      await MenuCache.save(
+        currentMenu,
+        sha: sha,
+      );
+
+      if (imagePath.isNotEmpty) {
+        try {
+          await GitHubService.deleteImage(
+            fileName: imagePath,
+          );
+        } catch (_) {
+          _showMessage(
+            'محصول حذف شد، ولی حذف عکس از GitHub ناموفق بود.',
+          );
+        }
+      }
+
+      if (!mounted) return;
+
       _showMessage('محصول حذف و در GitHub ذخیره شد.');
     } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        category.items.insert(
+          oldIndex,
+          item,
+        );
+      });
+
       _showMessage(
-        'محصول حذف شد ولی ذخیره در GitHub ناموفق بود: $e',
+        'حذف محصول ناموفق بود و تغییرات برگردانده شد.',
       );
     }
   }
@@ -350,6 +431,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _editCategory(MenuCategory category) async {
+    final currentMenu = menu;
+
+    if (currentMenu == null) return;
+
+    if (category.id == 'uncategorized') {
+      _showMessage(
+        'دسته «بدون دسته‌بندی» قابل ویرایش نیست.',
+      );
+      return;
+    }
+
+    final oldImagePath = category.image.trim();
+
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (_) => _CategoryDialog(
@@ -364,20 +458,57 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (result == null || !mounted) return;
 
+    final newImagePath = result['image']?.trim() ?? '';
+
+    final oldName = category.name;
+    final oldImage = category.image;
+
     setState(() {
       category.name = result['name']!.trim();
-      category.image = result['image']?.trim() ?? '';
+      category.image = newImagePath;
     });
 
     try {
-      final sha = await repo.save(menu!);
-      await MenuCache.save(menu!, sha: sha);
+      final sha = await repo.save(currentMenu);
+
+      await MenuCache.save(
+        currentMenu,
+        sha: sha,
+      );
+
+      // اگر عکس واقعاً تغییر کرده باشد، عکس قبلی را حذف می‌کنیم.
+      // اگر مسیرها یکی باشند، uploadImage همان فایل را overwrite کرده
+      // و نباید فایل جدید حذف شود.
+      if (oldImagePath.isNotEmpty &&
+          oldImagePath != newImagePath) {
+        try {
+          await GitHubService.deleteImage(
+            fileName: oldImagePath,
+          );
+        } catch (_) {
+          if (mounted) {
+            _showMessage(
+              'دسته ذخیره شد، ولی حذف عکس قبلی از GitHub ناموفق بود.',
+            );
+          }
+        }
+      }
+
+      if (!mounted) return;
+
       _showMessage(
         'دسته ویرایش و در GitHub ذخیره شد.',
       );
     } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        category.name = oldName;
+        category.image = oldImage;
+      });
+
       _showMessage(
-        'تغییر اعمال شد ولی ذخیره در GitHub ناموفق بود: $e',
+        'ویرایش دسته ناموفق بود و تغییرات برگردانده شد.',
       );
     }
   }
@@ -387,479 +518,245 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (currentMenu == null) return;
 
-    final message = category.items.isEmpty
-        ? 'دسته «${category.name}» خالی است.\nآیا حذف شود؟'
-        : 'دسته «${category.name}» شامل ${category.items.length} محصول است.\n'
-            'با حذف دسته، محصولات آن نیز از منوی فعلی حذف می‌شوند.\n\n'
-            'آیا مطمئن هستید؟';
+    if (category.id == 'uncategorized') {
+      _showMessage(
+        'دسته «بدون دسته‌بندی» قابل حذف نیست.',
+      );
+      return;
+    }
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('حذف دسته'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('لغو'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
+    final categoryImagePath = category.image.trim();
 
-    if (ok != true || !mounted) return;
+    // عکس محصولات را قبل از حذف دسته نگه می‌داریم.
+    final productImagePaths = category.items
+        .map((item) => item.image.trim())
+        .where((path) => path.isNotEmpty)
+        .toSet()
+        .toList();
+
+    // اگر دسته محصول دارد، ابتدا از کاربر می‌پرسیم
+    // محصولات حذف شوند یا به «بدون دسته‌بندی» منتقل شوند.
+    bool deleteProducts = false;
+
+    if (category.items.isNotEmpty) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('حذف دسته'),
+          content: Text(
+            'دسته «${category.name}» شامل '
+            '${category.items.length} محصول است.\n\n'
+            'با محصولات این دسته چه کار کنیم؟',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(
+                context,
+                'cancel',
+              ),
+              child: const Text('لغو'),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(
+                context,
+                'keep',
+              ),
+              child: const Text(
+                'نگه‌داشتن محصولات',
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                context,
+                'delete',
+              ),
+              child: const Text(
+                'حذف محصولات',
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (action == null || action == 'cancel' || !mounted) {
+        return;
+      }
+
+      deleteProducts = action == 'delete';
+    } else {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('حذف دسته'),
+          content: Text(
+            'دسته «${category.name}» خالی است.\n'
+            'آیا حذف شود؟',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(
+                context,
+                false,
+              ),
+              child: const Text('لغو'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                context,
+                true,
+              ),
+              child: const Text('حذف'),
+            ),
+          ],
+        ),
+      );
+
+      if (ok != true || !mounted) return;
+    }
+
+    final categoryIndex =
+        currentMenu.categories.indexOf(category);
+
+    if (categoryIndex < 0) return;
+
+    // Snapshot کامل قبل از هر تغییری.
+    // اگر ذخیره در GitHub شکست بخورد، دقیقاً به همین وضعیت برمی‌گردیم.
+    final oldCategories =
+        List<MenuCategory>.from(currentMenu.categories);
+
+    final oldItemsByCategory =
+        <MenuCategory, List<MenuItemModel>>{
+      for (final existingCategory in currentMenu.categories)
+        existingCategory: List<MenuItemModel>.from(
+          existingCategory.items,
+        ),
+    };
+
+    // اگر قرار است محصولات باقی بمانند،
+    // دسته «بدون دسته‌بندی» را پیدا یا ایجاد می‌کنیم.
+    MenuCategory? uncategorized;
+
+    if (!deleteProducts && category.items.isNotEmpty) {
+      for (final existingCategory in currentMenu.categories) {
+        if (existingCategory.id == 'uncategorized') {
+          uncategorized = existingCategory;
+          break;
+        }
+      }
+
+      if (uncategorized == null) {
+        uncategorized = MenuCategory(
+          id: 'uncategorized',
+          name: 'بدون دسته‌بندی',
+          image: '',
+          items: [],
+        );
+
+        currentMenu.categories.add(
+          uncategorized,
+        );
+      }
+    }
 
     setState(() {
+      if (!deleteProducts &&
+          uncategorized != null) {
+        uncategorized!.items.addAll(
+          category.items,
+        );
+      }
+
       currentMenu.categories.remove(category);
 
       if (currentMenu.categories.isEmpty) {
         _selectedCategoryId = null;
       } else if (_selectedCategoryId == category.id) {
         _selectedCategoryId =
-            currentMenu.categories.first.id;
+            !deleteProducts &&
+                    uncategorized != null
+                ? uncategorized.id
+                : currentMenu.categories.first.id;
       }
     });
 
     try {
       final sha = await repo.save(currentMenu);
-      await MenuCache.save(currentMenu, sha: sha);
-      _showMessage(
-        'دسته حذف و در GitHub ذخیره شد.',
+
+      await MenuCache.save(
+        currentMenu,
+        sha: sha,
       );
+
+      var imageDeleteFailed = false;
+
+      // حذف عکس خود دسته
+      if (categoryImagePath.isNotEmpty) {
+        try {
+          await GitHubService.deleteImage(
+            fileName: categoryImagePath,
+          );
+        } catch (_) {
+          imageDeleteFailed = true;
+        }
+      }
+
+      // فقط وقتی محصولات حذف شده‌اند،
+      // عکس محصولات هم حذف می‌شود.
+      if (deleteProducts) {
+        for (final imagePath in productImagePaths) {
+          try {
+            await GitHubService.deleteImage(
+              fileName: imagePath,
+            );
+          } catch (_) {
+            imageDeleteFailed = true;
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      if (deleteProducts) {
+        if (imageDeleteFailed) {
+          _showMessage(
+            'دسته و محصولات حذف شدند، ولی حذف بعضی عکس‌ها از GitHub ناموفق بود.',
+          );
+        } else {
+          _showMessage(
+            'دسته «${category.name}» و محصولات آن حذف شدند.',
+          );
+        }
+      } else {
+        _showMessage(
+          'دسته «${category.name}» حذف شد و محصولات به «بدون دسته‌بندی» منتقل شدند.',
+        );
+      }
     } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        currentMenu.categories
+          ..clear()
+          ..addAll(oldCategories);
+
+        for (final entry in oldItemsByCategory.entries) {
+          entry.key.items
+            ..clear()
+            ..addAll(entry.value);
+        }
+
+        if (currentMenu.categories.isEmpty) {
+          _selectedCategoryId = null;
+        } else {
+          _selectedCategoryId =
+              category.id;
+        }
+      });
+
       _showMessage(
-        'دسته حذف شد ولی ذخیره در GitHub ناموفق بود: $e',
+        'حذف دسته ناموفق بود و تغییرات برگردانده شد.',
       );
     }
-  }
-
-  void _showMessage(String message) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-  }
-
-  String _formatPrice(int price) {
-    final value = price.toString();
-    final buffer = StringBuffer();
-
-    for (var i = 0; i < value.length; i++) {
-      if (i > 0 && (value.length - i) % 3 == 0) {
-        buffer.write(',');
-      }
-
-      buffer.write(value[i]);
-    }
-
-    return buffer.toString();
-  }
-
-  MenuCategory? get _selectedCategory {
-    final currentMenu = menu;
-
-    if (currentMenu == null) return null;
-
-    for (final category in currentMenu.categories) {
-      if (category.id == _selectedCategoryId) {
-        return category;
-      }
-    }
-
-    return currentMenu.categories.isNotEmpty
-        ? currentMenu.categories.first
-        : null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (error != null) {
-      return _buildErrorScreen();
-    }
-
-    final currentMenu = menu!;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _load,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: _buildTopBar(),
-              ),
-
-              SliverToBoxAdapter(
-                child: _buildRestaurantHeader(
-                  currentMenu.restaurant,
-                ),
-              ),
-
-              SliverToBoxAdapter(
-                child: _buildSectionTitle(),
-              ),
-
-              SliverToBoxAdapter(
-                child: _buildCategorySelector(
-                  currentMenu.categories,
-                ),
-              ),
-
-              SliverToBoxAdapter(
-                child: _buildProductsHeader(),
-              ),
-
-              if (_selectedCategory == null)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _buildEmptyMenu(),
-                )
-              else if (_selectedCategory!.items.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _buildEmptyProducts(
-                    _selectedCategory!,
-                  ),
-                )
-              else
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      16,
-                      4,
-                      16,
-                      110,
-                    ),
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics:
-                          const NeverScrollableScrollPhysics(),
-                      buildDefaultDragHandles: false,
-                      itemCount:
-                          _selectedCategory!.items.length,
-                      onReorder: (oldIndex, newIndex) {
-                        _reorderProducts(
-                          _selectedCategory!,
-                          oldIndex,
-                          newIndex,
-                        );
-                      },
-                      itemBuilder: (context, index) {
-                        final category = _selectedCategory!;
-
-                        return Padding(
-                          key: ValueKey(
-                            category.items[index].id,
-                          ),
-                          padding: const EdgeInsets.only(
-                            bottom: 12,
-                          ),
-                          child:
-                              ReorderableDelayedDragStartListener(
-                            index: index,
-                            child: _buildProductCard(
-                              category,
-                              index,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: _buildAddProductButton(),
-    );
-  }
-
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        12,
-        16,
-        8,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'مدیریت منو',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ),
-
-          _topActionButton(
-            icon: Icons.settings_outlined,
-            tooltip: 'تنظیمات',
-            onPressed: () async {
-              final changed = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const SettingsScreen(),
-                ),
-              );
-
-              if (changed == true && mounted) {
-                await _load();
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _topActionButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onPressed,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onPressed,
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: Icon(icon, color: const Color(0xFF202124)),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRestaurantHeader(Restaurant restaurant) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-        16,
-        8,
-        16,
-        16,
-      ),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .05),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: const Color(0xFFF1F1F1),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: restaurant.logo.trim().isNotEmpty
-                ? RemoteImage(
-                    path: restaurant.logo,
-                    width: 76,
-                    height: 76,
-                    fit: BoxFit.cover,
-                    error: const Icon(
-                      Icons.restaurant_rounded,
-                      size: 34,
-                    ),
-                  )
-                : const Icon(
-                    Icons.restaurant_rounded,
-                    size: 34,
-                  ),
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  restaurant.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                if (restaurant.description.isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Text(
-                    restaurant.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 10),
-
-                InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () async {
-                    final currentMenu = menu;
-
-                    if (currentMenu == null) return;
-
-                    final result =
-                        await Navigator.push<bool>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            RestaurantSettingsScreen(
-                          menu: currentMenu,
-                          repository: repo,
-                        ),
-                      ),
-                    );
-
-                    if (result == true && mounted) {
-                      await _load();
-                    }
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.edit_outlined,
-                          size: 17,
-                        ),
-                        SizedBox(width: 5),
-                        Text(
-                          'ویرایش اطلاعات رستوران',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle() {
-    final count = menu?.categories.length ?? 0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        0,
-        16,
-        10,
-      ),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Text(
-              'دسته‌بندی منو',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-
-          Text(
-            '$count دسته',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: _addCategory,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 7,
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE8E8),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.add,
-                    size: 18,
-                    color: Color(0xFFE53935),
-                  ),
-                  SizedBox(width: 3),
-                  Text(
-                    'دسته جدید',
-                    style: TextStyle(
-                      color: Color(0xFFE53935),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _reorderCategories(
@@ -1099,7 +996,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          if (category != null)
+          if (category != null &&
+              category.id != 'uncategorized')
             PopupMenuButton<String>(
               tooltip: 'مدیریت دسته',
               onSelected: (value) {
