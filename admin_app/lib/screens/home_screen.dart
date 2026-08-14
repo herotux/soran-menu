@@ -384,6 +384,419 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  String _formatPrice(int price) {
+    final value = price.toString();
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < value.length; i++) {
+      if (i > 0 && (value.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+
+      buffer.write(value[i]);
+    }
+
+    return buffer.toString();
+  }
+
+  MenuCategory? get _selectedCategory {
+    final currentMenu = menu;
+
+    if (currentMenu == null) return null;
+
+    for (final category in currentMenu.categories) {
+      if (category.id == _selectedCategoryId) {
+        return category;
+      }
+    }
+
+    return currentMenu.categories.isNotEmpty
+        ? currentMenu.categories.first
+        : null;
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return _buildErrorScreen();
+    }
+
+    final currentMenu = menu!;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F7F7),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: _buildTopBar(),
+              ),
+
+              SliverToBoxAdapter(
+                child: _buildRestaurantHeader(
+                  currentMenu.restaurant,
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: _buildSectionTitle(),
+              ),
+
+              SliverToBoxAdapter(
+                child: _buildCategorySelector(
+                  currentMenu.categories,
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: _buildProductsHeader(),
+              ),
+
+              if (_selectedCategory == null)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildEmptyMenu(),
+                )
+              else if (_selectedCategory!.items.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildEmptyProducts(
+                    _selectedCategory!,
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    4,
+                    16,
+                    110,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final category = _selectedCategory!;
+
+                        return _buildProductCard(
+                          category,
+                          index,
+                        );
+                      },
+                      childCount:
+                          _selectedCategory!.items.length,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: _buildAddProductButton(),
+    );
+  }
+
+
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        8,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'مدیریت منو',
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
+
+          _topActionButton(
+            icon: Icons.refresh_rounded,
+            tooltip: 'بارگذاری مجدد',
+            onPressed: _load,
+          ),
+
+          const SizedBox(width: 6),
+
+          _topActionButton(
+            icon: Icons.settings_outlined,
+            tooltip: 'تنظیمات',
+            onPressed: () async {
+              final changed = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              );
+
+              if (changed == true && mounted) {
+                await _load();
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _topActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(icon),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRestaurantHeader(Restaurant restaurant) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        16,
+        8,
+        16,
+        16,
+      ),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .05),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: const Color(0xFFF1F1F1),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: restaurant.logo.trim().isNotEmpty
+                ? RemoteImage(
+                    path: restaurant.logo,
+                    width: 76,
+                    height: 76,
+                    fit: BoxFit.cover,
+                    error: const Icon(
+                      Icons.restaurant_rounded,
+                      size: 34,
+                    ),
+                  )
+                : const Icon(
+                    Icons.restaurant_rounded,
+                    size: 34,
+                  ),
+          ),
+
+          const SizedBox(width: 14),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  restaurant.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+
+                if (restaurant.description.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    restaurant.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 10),
+
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () async {
+                    final currentMenu = menu;
+
+                    if (currentMenu == null) return;
+
+                    final result =
+                        await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            RestaurantSettingsScreen(
+                          menu: currentMenu,
+                          repository: repo,
+                        ),
+                      ),
+                    );
+
+                    if (result == true && mounted) {
+                      await _load();
+                    }
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 4,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 17,
+                        ),
+                        SizedBox(width: 5),
+                        Text(
+                          'ویرایش اطلاعات رستوران',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle() {
+    final count = menu?.categories.length ?? 0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        10,
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'دسته‌بندی منو',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+
+          Text(
+            '$count دسته',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _addCategory,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 7,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE8E8),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add,
+                    size: 18,
+                    color: Color(0xFFE53935),
+                  ),
+                  SizedBox(width: 3),
+                  Text(
+                    'دسته جدید',
+                    style: TextStyle(
+                      color: Color(0xFFE53935),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Future<void> _addCategory() async {
     final result = await showDialog<Map<String, String>>(
       context: context,
