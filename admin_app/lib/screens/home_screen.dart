@@ -839,6 +839,48 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _reorderCategories(
+    List<MenuCategory> categories,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    if (oldIndex == newIndex) return;
+
+    final oldOrder = List<MenuCategory>.from(categories);
+
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+
+      final category = categories.removeAt(oldIndex);
+      categories.insert(newIndex, category);
+    });
+
+    try {
+      final sha = await repo.save(menu!);
+
+      await MenuCache.save(
+        menu!,
+        sha: sha,
+      );
+
+      if (!mounted) return;
+
+      _showMessage('ترتیب دسته‌ها ذخیره شد.');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        categories
+          ..clear()
+          ..addAll(oldOrder);
+      });
+
+      _showMessage('ذخیره ترتیب دسته‌ها ناموفق بود.');
+    }
+  }
+
   Widget _buildCategorySelector(
     List<MenuCategory> categories,
   ) {
@@ -856,91 +898,112 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return SizedBox(
       height: 132,
-      child: ListView.separated(
+      child: ReorderableListView.builder(
+        scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
           horizontal: 16,
         ),
-        scrollDirection: Axis.horizontal,
+        buildDefaultDragHandles: false,
         itemCount: categories.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(width: 10),
+        onReorder: (oldIndex, newIndex) {
+          _reorderCategories(
+            categories,
+            oldIndex,
+            newIndex,
+          );
+        },
         itemBuilder: (context, index) {
           final category = categories[index];
 
           final selected =
               category.id == _selectedCategoryId;
 
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedCategoryId = category.id;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 108,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: selected
-                    ? const Color(0xFFFFE6E6)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: selected
-                      ? const Color(0xFFE53935)
-                      : Colors.transparent,
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: .04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+          return SizedBox(
+            key: ValueKey(category.id),
+            width: 108,
+            child: Padding(
+              padding: const EdgeInsets.only(
+                right: 10,
               ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(13),
-                        color: const Color(0xFFF1F1F1),
+              child: ReorderableDelayedDragStartListener(
+                index: index,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedCategoryId = category.id;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(
+                      milliseconds: 180,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? const Color(0xFFFFE6E6)
+                          : Colors.white,
+                      borderRadius:
+                          BorderRadius.circular(18),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFFE53935)
+                            : Colors.transparent,
+                        width: 1.5,
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: category.image.isNotEmpty
-                          ? RemoteImage(
-                              path: category.image,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              error: const Icon(
-                                Icons.category_outlined,
-                                size: 30,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.category_outlined,
-                              size: 30,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: .04,
+                          ),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius:
+                                  BorderRadius.circular(13),
+                              color:
+                                  const Color(0xFFF1F1F1),
                             ),
+                            clipBehavior: Clip.antiAlias,
+                            child: category.image.isNotEmpty
+                                ? RemoteImage(
+                                    path: category.image,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    error: const Icon(
+                                      Icons.category_outlined,
+                                      size: 30,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.category_outlined,
+                                    size: 30,
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          category.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: 7),
-
-                  Text(
-                    category.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: selected
-                          ? FontWeight.w800
-                          : FontWeight.w600,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           );
