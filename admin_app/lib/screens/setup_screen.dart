@@ -126,7 +126,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   'پس از اتصال، اطلاعات منو مستقیماً از menu.json خوانده می‌شود.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.grey.shade400,
+                    color: const Color(0xFF80868B),
                     height: 1.7,
                   ),
                 ),
@@ -244,7 +244,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 Text(
                   'Token فقط به صورت امن روی دستگاه ذخیره می‌شود.',
                   style: TextStyle(
-                    color: Colors.grey.shade500,
+                    color: const Color(0xFF5F6368),
                     fontSize: 12,
                   ),
                 ),
@@ -279,7 +279,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   'از Repository شما خوانده می‌شوند.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.grey.shade500,
+                    color: const Color(0xFF5F6368),
                     fontSize: 12,
                     height: 1.5,
                   ),

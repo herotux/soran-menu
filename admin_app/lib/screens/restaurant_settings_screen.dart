@@ -168,7 +168,7 @@ class _RestaurantSettingsScreenState
               height: 180,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
+                border: Border.all(color: const Color(0xFF5F6368)),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(
@@ -186,7 +186,7 @@ class _RestaurantSettingsScreenState
       height: 180,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
+        border: Border.all(color: const Color(0xFF5F6368)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Icon(
@@ -272,7 +272,7 @@ class _RestaurantSettingsScreenState
 
               const Text(
                 'این اطلاعات مستقیماً در menu.json ذخیره می‌شوند.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: const Color(0xFF5F6368)),
               ),
 
               const SizedBox(height: 24),

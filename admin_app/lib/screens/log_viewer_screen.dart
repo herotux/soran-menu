@@ -209,7 +209,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.grey.shade400,
+            color: const Color(0xFF5F6368),
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -317,7 +317,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                         ),
                         subtitle: Text(
                           log.timestamp.toLocal().toString().substring(11, 19),
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                          style: TextStyle(color: const Color(0xFF80868B), fontSize: 12),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,

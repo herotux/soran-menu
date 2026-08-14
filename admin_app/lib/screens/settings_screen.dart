@@ -288,7 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Text(
               'Token به صورت امن روی گوشی ذخیره می‌شود و داخل سورس برنامه قرار نمی‌گیرد.',
               style: TextStyle(
-                color: Colors.grey,
+                color: const Color(0xFF5F6368),
                 fontSize: 12,
               ),
             ),
