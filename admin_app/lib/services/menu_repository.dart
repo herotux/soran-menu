@@ -20,7 +20,7 @@ abstract class MenuRepository {
 
   Future<String> getRemoteSha();
 
-  Future<void> save(MenuData menu);
+  Future<String> save(MenuData menu);
 }
 
 class RemoteMenuRepository implements MenuRepository {
@@ -174,7 +174,7 @@ class RemoteMenuRepository implements MenuRepository {
   }
 
   @override
-  Future<void> save(MenuData menu) async {
+  Future<String> save(MenuData menu) async {
     final settings = await _settings();
 
     final file = await _getFile(
