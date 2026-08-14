@@ -172,15 +172,6 @@
           "available": true
         },
         {
-          "id": "65670",
-          "name": "کلاسیک برگر",
-          "description": "برگر ذغالی+مخلفات",
-          "price": 250,
-          "oldPrice": null,
-          "image": "/images/1708604754090.jpeg",
-          "available": true
-        },
-        {
           "id": "65703",
           "name": "گریل برگر",
           "description": "فیله گریل شده+پروسس+گودا+مخلفات",
@@ -196,6 +187,15 @@
           "price": 280,
           "oldPrice": null,
           "image": "/images/1708776467605.jpeg",
+          "available": true
+        },
+        {
+          "id": "65670",
+          "name": "کلاسیک برگر",
+          "description": "برگر ذغالی+مخلفات",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/1708604754090.jpeg",
           "available": true
         }
       ]
