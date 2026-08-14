@@ -187,6 +187,7 @@ class GitHubService {
 
     // مسیرهای رایج را ترجیح می‌دهیم.
     const preferred = [
+      'website/src/data/menu.json',
       'menu.json',
       'src/data/menu.json',
       'data/menu.json',
