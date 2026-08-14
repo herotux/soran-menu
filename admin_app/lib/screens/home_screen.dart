@@ -1334,7 +1334,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   candidateData,
                   rejectedData,
                 ) {
-                  final isDropTarget = candidateData.isNotEmpty;
+                  final isDropTarget =
+                      candidateData.isNotEmpty;
 
                   return GestureDetector(
                     onTap: () {
@@ -1361,7 +1362,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               : selected
                                   ? const Color(0xFFE53935)
                                   : Colors.transparent,
-                          width: isDropTarget ? 2.5 : 1.5,
+                          width:
+                              isDropTarget ? 2.5 : 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -1374,73 +1376,50 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       child: Column(
-                    duration: const Duration(
-                      milliseconds: 180,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? const Color(0xFFFFE6E6)
-                          : Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(18),
-                      border: Border.all(
-                        color: selected
-                            ? const Color(0xFFE53935)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: .04,
-                          ),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(13),
-                              color:
-                                  const Color(0xFFF1F1F1),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: category.image.isNotEmpty
-                                ? RemoteImage(
-                                    path: category.image,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    error: const Icon(
-                                      Icons.category_outlined,
+                        children: [
+                          Expanded(
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(13),
+                                color:
+                                    const Color(0xFFF1F1F1),
+                              ),
+                              clipBehavior:
+                                  Clip.antiAlias,
+                              child: category.image.isNotEmpty
+                                  ? RemoteImage(
+                                      path: category.image,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      error: const Icon(
+                                        Icons
+                                            .category_outlined,
+                                        size: 30,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons
+                                          .category_outlined,
                                       size: 30,
                                     ),
-                                  )
-                                : const Icon(
-                                    Icons.category_outlined,
-                                    size: 30,
-                                  ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 7),
-                        Text(
-                          category.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: selected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
+                          const SizedBox(height: 7),
+                          Text(
+                            category.name,
+                            maxLines: 1,
+                            overflow:
+                                TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: selected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
                       ),
                     ),
                   );
