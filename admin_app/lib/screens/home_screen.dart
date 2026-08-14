@@ -1450,10 +1450,14 @@ class _CategoryDialogState
       final fileName =
           'category_$id.$extension';
 
-      return await GitHubService.uploadImage(
+      final uploadedPath = await GitHubService.uploadImage(
         fileName: fileName,
         bytes: bytes,
       );
+
+      imagePath = uploadedPath;
+
+      return uploadedPath;
     } finally {
       if (mounted) {
         setState(() {
@@ -1539,18 +1543,56 @@ class _CategoryDialogState
       );
     }
 
-    if (imagePath.isNotEmpty) {
+    final path = imagePath.trim();
+
+    if (path.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: RemoteImage(
-          path: imagePath,
-          height: 150,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          error: const Icon(
-            Icons.broken_image,
-            size: 48,
-          ),
+        child: FutureBuilder<String>(
+          future: AppSettings.imageUrl(path),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const SizedBox(
+                height: 150,
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            final url = snapshot.data ?? '';
+
+            if (url.isEmpty) {
+              return const SizedBox(
+                height: 150,
+                child: Center(
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    size: 48,
+                  ),
+                ),
+              );
+            }
+
+            return Image.network(
+              url,
+              height: 150,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              errorBuilder: (_, __, ___) {
+                return const SizedBox(
+                  height: 150,
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      size: 48,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       );
     }
