@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../services/menu_repository.dart';
 import '../services/app_settings.dart';
 import '../services/github_service.dart';
+import '../services/menu_repository.dart';
 
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key});
@@ -14,10 +14,7 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   final formKey = GlobalKey<FormState>();
 
-  final owner = TextEditingController();
-  final repo = TextEditingController();
-  final branch = TextEditingController();
-  final path = TextEditingController();
+  final siteUrl = TextEditingController();
   final token = TextEditingController();
 
   bool obscureToken = true;
@@ -25,10 +22,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   void dispose() {
-    owner.dispose();
-    repo.dispose();
-    branch.dispose();
-    path.dispose();
+    siteUrl.dispose();
     token.dispose();
     super.dispose();
   }
@@ -47,47 +41,67 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Future<void> _connect() async {
-    if (!formKey.currentState!.validate()) return;
+    if (!formKey.currentState!.validate()) {
+      return;
+    }
 
-    setState(() => connecting = true);
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      connecting = true;
+    });
 
     try {
-      await GitHubService.testConnection(
-        owner: owner.text,
-        repo: repo.text,
-        branch: branch.text,
-        path: path.text,
-        token: token.text,
-      );
-
-      // Save GitHub settings after the direct connection test succeeds.
-      await AppSettings.save(
-        owner: owner.text.trim(),
-        repo: repo.text.trim(),
-        branch: branch.text.trim(),
-        menuPath: path.text.trim(),
-        siteUrl: '',
+      final discovery = await GitHubService.discover(
+        siteUrl: siteUrl.text.trim(),
         token: token.text.trim(),
       );
 
-      // Now load the real menu using the saved GitHub settings.
+      await AppSettings.save(
+        owner: discovery.owner,
+        repo: discovery.repo,
+        branch: discovery.branch,
+        menuPath: discovery.menuPath,
+        siteUrl: siteUrl.text.trim(),
+        token: token.text.trim(),
+      );
+
       final repository = RemoteMenuRepository();
+
       await repository.load();
 
-      if (!mounted) return;
-
-      Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('اتصال برقرار نشد:\n$e'),
+          content: Text(
+            'منو پیدا شد: '
+            '${discovery.owner}/${discovery.repo}'
+            ' → ${discovery.menuPath}',
+          ),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'اتصال برقرار نشد:\n$e',
+          ),
         ),
       );
     } finally {
       if (mounted) {
-        setState(() => connecting = false);
+        setState(() {
+          connecting = false;
+        });
       }
     }
   }
@@ -101,7 +115,12 @@ class _SetupScreenState extends State<SetupScreen> {
           child: Form(
             key: formKey,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
+              padding: const EdgeInsets.fromLTRB(
+                24,
+                48,
+                24,
+                32,
+              ),
               children: [
                 const Icon(
                   Icons.cloud_sync,
@@ -121,12 +140,13 @@ class _SetupScreenState extends State<SetupScreen> {
 
                 const SizedBox(height: 12),
 
-                Text(
-                  'برای شروع، اطلاعات Repository گیت‌هاب خود را وارد کنید. '
-                  'پس از اتصال، اطلاعات منو مستقیماً از menu.json خوانده می‌شود.',
+                const Text(
+                  'فقط آدرس سایت و GitHub Token را وارد کنید. '
+                  'اپ Repository، Branch و menu.json را '
+                  'به‌صورت خودکار پیدا می‌کند.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: const Color(0xFF80868B),
+                    color: Color(0xFF80868B),
                     height: 1.7,
                   ),
                 ),
@@ -134,7 +154,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 const SizedBox(height: 36),
 
                 const Text(
-                  'اطلاعات GitHub',
+                  'اطلاعات اتصال',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -144,67 +164,30 @@ class _SetupScreenState extends State<SetupScreen> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: owner,
+                  controller: siteUrl,
                   textDirection: TextDirection.ltr,
+                  keyboardType: TextInputType.url,
                   decoration: input(
-                    'GitHub Owner',
-                    hint: 'username',
+                    'آدرس سایت',
+                    hint: 'https://username.github.io/',
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'GitHub Owner را وارد کنید';
+                    final valueTrimmed =
+                        value?.trim() ?? '';
+
+                    if (valueTrimmed.isEmpty) {
+                      return 'آدرس سایت را وارد کنید';
                     }
-                    return null;
-                  },
-                ),
 
-                const SizedBox(height: 14),
+                    final uri =
+                        Uri.tryParse(valueTrimmed);
 
-                TextFormField(
-                  controller: repo,
-                  textDirection: TextDirection.ltr,
-                  decoration: input(
-                    'Repository',
-                    hint: 'my-menu',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'نام Repository را وارد کنید';
+                    if (uri == null ||
+                        uri.scheme != 'https' ||
+                        uri.host.isEmpty) {
+                      return 'آدرس سایت معتبر نیست';
                     }
-                    return null;
-                  },
-                ),
 
-                const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: branch,
-                  textDirection: TextDirection.ltr,
-                  decoration: input(
-                    'Branch',
-                    hint: 'main',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Branch را وارد کنید';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: path,
-                  textDirection: TextDirection.ltr,
-                  decoration: input(
-                    'مسیر menu.json',
-                    hint: 'src/data/menu.json',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'مسیر menu.json را وارد کنید';
-                    }
                     return null;
                   },
                 ),
@@ -232,19 +215,22 @@ class _SetupScreenState extends State<SetupScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
+                    if (value == null ||
+                        value.trim().isEmpty) {
                       return 'GitHub Token را وارد کنید';
                     }
+
                     return null;
                   },
                 ),
 
                 const SizedBox(height: 10),
 
-                Text(
-                  'Token فقط به صورت امن روی دستگاه ذخیره می‌شود.',
+                const Text(
+                  'Token فقط به‌صورت امن روی دستگاه ذخیره می‌شود '
+                  'و داخل سورس برنامه قرار نمی‌گیرد.',
                   style: TextStyle(
-                    color: const Color(0xFF5F6368),
+                    color: Color(0xFF5F6368),
                     fontSize: 12,
                   ),
                 ),
@@ -252,12 +238,14 @@ class _SetupScreenState extends State<SetupScreen> {
                 const SizedBox(height: 28),
 
                 FilledButton.icon(
-                  onPressed: connecting ? null : _connect,
+                  onPressed:
+                      connecting ? null : _connect,
                   icon: connecting
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
+                          child:
+                              CircularProgressIndicator(
                             strokeWidth: 2,
                           ),
                         )
@@ -266,22 +254,33 @@ class _SetupScreenState extends State<SetupScreen> {
                     padding: const EdgeInsets.all(13),
                     child: Text(
                       connecting
-                          ? 'در حال اتصال...'
+                          ? 'در حال پیدا کردن منو...'
                           : 'اتصال و دریافت منو',
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                Text(
-                  'پس از اتصال، اطلاعات رستوران، دسته‌ها و محصولات '
-                  'از Repository شما خوانده می‌شوند.',
+                const Text(
+                  'اپ به‌صورت خودکار موارد زیر را پیدا می‌کند:',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: const Color(0xFF5F6368),
-                    fontSize: 12,
-                    height: 1.5,
+                    color: Color(0xFF5F6368),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  '✓ GitHub Owner\n'
+                  '✓ Repository\n'
+                  '✓ Branch\n'
+                  '✓ menu.json',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    height: 1.8,
+                    color: Color(0xFF5F6368),
                   ),
                 ),
               ],

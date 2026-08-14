@@ -36,28 +36,6 @@ class AppSettings {
     return prefs.getString(_siteUrlKey) ?? '';
   }
 
-  static Future<String> imageUrl(String path) async {
-    final siteUrl = (await getSiteUrl()).trim();
-
-    if (path.trim().isEmpty) {
-      return '';
-    }
-
-    final value = path.trim();
-
-    if (value.startsWith('http://') ||
-        value.startsWith('https://')) {
-      return value;
-    }
-
-    if (siteUrl.isEmpty) {
-      return value;
-    }
-
-    return '${siteUrl.replaceAll(RegExp(r'/$'), '')}'
-        '/${value.replaceFirst(RegExp(r'^/'), '')}';
-  }
-
   static Future<String> getToken() async {
     return await _secureStorage.read(key: _tokenKey) ?? '';
   }
@@ -100,6 +78,28 @@ class AppSettings {
         value: token.trim(),
       );
     }
+  }
+
+  static Future<String> imageUrl(String path) async {
+    final value = path.trim();
+
+    if (value.isEmpty) {
+      return '';
+    }
+
+    if (value.startsWith('http://') ||
+        value.startsWith('https://')) {
+      return value;
+    }
+
+    final siteUrl = (await getSiteUrl()).trim();
+
+    if (siteUrl.isEmpty) {
+      return value;
+    }
+
+    return '${siteUrl.replaceAll(RegExp(r'/$'), '')}'
+        '/${value.replaceFirst(RegExp(r'^/'), '')}';
   }
 
   static Future<void> clear() async {
