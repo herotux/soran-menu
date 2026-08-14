@@ -101,8 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final data = await repo.load();
+      final sha = await repo.getRemoteSha();
 
-      await MenuCache.save(data);
+      await MenuCache.save(
+        data,
+        sha: sha,
+      );
 
       if (!mounted) return;
 
@@ -177,8 +181,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      await repo.save(currentMenu);
-      await MenuCache.save(currentMenu);
+      final sha = await repo.save(currentMenu);
+      await MenuCache.save(currentMenu, sha: sha);
       _showMessage(
         'محصول به «${category.name}» اضافه و در GitHub ذخیره شد.',
       );
@@ -225,8 +229,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      await repo.save(currentMenu);
-      await MenuCache.save(currentMenu);
+      final sha = await repo.save(currentMenu);
+      await MenuCache.save(currentMenu, sha: sha);
       _showMessage('محصول ویرایش و در GitHub ذخیره شد.');
     } catch (e) {
       _showMessage(
@@ -272,8 +276,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      await repo.save(currentMenu);
-      await MenuCache.save(currentMenu);
+      final sha = await repo.save(currentMenu);
+      await MenuCache.save(currentMenu, sha: sha);
       _showMessage('محصول حذف و در GitHub ذخیره شد.');
     } catch (e) {
       _showMessage(
@@ -316,8 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      await repo.save(menu!);
-      await MenuCache.save(menu!);
+      final sha = await repo.save(menu!);
+      await MenuCache.save(menu!, sha: sha);
       _showMessage(
         'دسته «$name» ایجاد و در GitHub ذخیره شد.',
       );
@@ -349,8 +353,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      await repo.save(menu!);
-      await MenuCache.save(menu!);
+      final sha = await repo.save(menu!);
+      await MenuCache.save(menu!, sha: sha);
       _showMessage(
         'دسته ویرایش و در GitHub ذخیره شد.',
       );
@@ -404,8 +408,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      await repo.save(currentMenu);
-      await MenuCache.save(currentMenu);
+      final sha = await repo.save(currentMenu);
+      await MenuCache.save(currentMenu, sha: sha);
       _showMessage(
         'دسته حذف و در GitHub ذخیره شد.',
       );

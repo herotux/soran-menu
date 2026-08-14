@@ -18,7 +18,9 @@ class GitHubFile {
 abstract class MenuRepository {
   Future<MenuData> load();
 
-  Future<void> save(MenuData menu);
+  Future<String> getRemoteSha();
+
+  Future<String> save(MenuData menu);
 }
 
 class RemoteMenuRepository implements MenuRepository {
@@ -110,6 +112,36 @@ class RemoteMenuRepository implements MenuRepository {
   }
 
   @override
+  Future<String> getRemoteSha() async {
+    final settings = await _settings();
+
+    final uri = Uri.parse(
+      '$apiBase/repos/'
+      '${settings['owner']!}/'
+      '${settings['repo']!}/'
+      'contents/${settings['path']!}'
+      '?ref=${settings['branch']!}',
+    );
+
+    final response = await http.get(
+      uri,
+      headers: _headers(settings['token']!),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'خطا در بررسی نسخه menu.json: '
+        'HTTP ${response.statusCode}',
+      );
+    }
+
+    final data =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+    return data['sha']?.toString() ?? '';
+  }
+
+  @override
   Future<MenuData> load() async {
     final settings = await _settings();
 
@@ -170,5 +202,12 @@ class RemoteMenuRepository implements MenuRepository {
         'HTTP ${response.statusCode} ${response.body}',
       );
     }
+
+    final responseData =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+    return responseData['content'] is Map<String, dynamic>
+        ? responseData['content']['sha']?.toString() ?? ''
+        : '';
   }
 }
