@@ -100,12 +100,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
+      final remoteSha = await repo.getRemoteSha();
+      final cachedSha = await MenuCache.getSha();
+
+      if (menu != null &&
+          remoteSha.isNotEmpty &&
+          cachedSha.isNotEmpty &&
+          remoteSha == cachedSha) {
+        if (!mounted) return;
+
+        setState(() {
+          loading = false;
+          error = null;
+        });
+
+        return;
+      }
+
       final data = await repo.load();
-      final sha = await repo.getRemoteSha();
 
       await MenuCache.save(
         data,
-        sha: sha,
+        sha: remoteSha,
       );
 
       if (!mounted) return;

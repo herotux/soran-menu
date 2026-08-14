@@ -115,12 +115,17 @@ class RemoteMenuRepository implements MenuRepository {
   Future<String> getRemoteSha() async {
     final settings = await _settings();
 
+    final path = Uri.encodeQueryComponent(
+      settings['path']!,
+    );
+
     final uri = Uri.parse(
       '$apiBase/repos/'
       '${settings['owner']!}/'
       '${settings['repo']!}/'
-      'contents/${settings['path']!}'
-      '?ref=${settings['branch']!}',
+      'commits?path=$path'
+      '&sha=${Uri.encodeQueryComponent(settings['branch']!)}'
+      '&per_page=1',
     );
 
     final response = await http.get(
@@ -135,10 +140,19 @@ class RemoteMenuRepository implements MenuRepository {
       );
     }
 
-    final data =
-        jsonDecode(response.body) as Map<String, dynamic>;
+    final data = jsonDecode(response.body);
 
-    return data['sha']?.toString() ?? '';
+    if (data is! List || data.isEmpty) {
+      return '';
+    }
+
+    final first = data.first;
+
+    if (first is! Map<String, dynamic>) {
+      return '';
+    }
+
+    return first['sha']?.toString() ?? '';
   }
 
   @override
@@ -206,8 +220,12 @@ class RemoteMenuRepository implements MenuRepository {
     final responseData =
         jsonDecode(response.body) as Map<String, dynamic>;
 
-    return responseData['content'] is Map<String, dynamic>
-        ? responseData['content']['sha']?.toString() ?? ''
-        : '';
+    final commit = responseData['commit'];
+
+    if (commit is Map<String, dynamic>) {
+      return commit['sha']?.toString() ?? '';
+    }
+
+    return '';
   }
 }
