@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../services/app_settings.dart';
@@ -49,6 +50,19 @@ class _RemoteImageState extends State<RemoteImage> {
         );
   }
 
+  Widget _placeholderWidget() {
+    return widget.placeholder ??
+        const Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+            ),
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.path.trim().isEmpty) {
@@ -59,31 +73,24 @@ class _RemoteImageState extends State<RemoteImage> {
       future: _urlFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return widget.placeholder ??
-              const Center(
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
-                ),
-              );
+          return _placeholderWidget();
         }
 
-        final url = snapshot.data ?? '';
+        final url = snapshot.data?.trim() ?? '';
 
         if (url.isEmpty) {
           return _errorWidget();
         }
 
-        return Image.network(
-          url,
+        return CachedNetworkImage(
+          imageUrl: url,
           width: widget.width,
           height: widget.height,
           fit: widget.fit,
-          gaplessPlayback: true,
-          errorBuilder: (_, __, ___) => _errorWidget(),
+          fadeInDuration: Duration.zero,
+          fadeOutDuration: Duration.zero,
+          placeholder: (_, __) => _placeholderWidget(),
+          errorWidget: (_, __, ___) => _errorWidget(),
         );
       },
     );
