@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/menu_models.dart';
 import '../services/github_service.dart';
+import '../services/image_compressor.dart';
 import '../services/menu_repository.dart';
 
 class RestaurantSettingsScreen extends StatefulWidget {
@@ -121,14 +122,11 @@ class _RestaurantSettingsScreenState
     });
 
     try {
-      final bytes = await image.readAsBytes();
-
-      final extension = image.name.contains('.')
-          ? image.name.split('.').last.toLowerCase()
-          : 'jpg';
+      final originalBytes = await image.readAsBytes();
+      final bytes = await ImageCompressor.compress(originalBytes);
 
       final uploadedPath = await GitHubService.uploadImage(
-        fileName: 'restaurant_logo.$extension',
+        fileName: 'restaurant_logo.webp',
         bytes: bytes,
       );
 

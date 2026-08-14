@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/menu_models.dart';
 import '../services/github_service.dart';
+import '../services/image_compressor.dart';
 import '../widgets/remote_image.dart';
 
 class ProductFormResult {
@@ -128,11 +129,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     });
 
     try {
-      final bytes = await image.readAsBytes();
+      final originalBytes = await image.readAsBytes();
+      final bytes = await ImageCompressor.compress(originalBytes);
 
-      final extension = image.name.contains('.')
-          ? image.name.split('.').last.toLowerCase()
-          : 'jpg';
+      const extension = 'webp';
 
       final id = widget.item?.id ?? const Uuid().v4();
 
