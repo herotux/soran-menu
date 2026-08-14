@@ -497,19 +497,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     16,
                     110,
                   ),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final category = _selectedCategory!;
+                  sliver: SliverReorderableList(
+                    itemBuilder: (context, index) {
+                      final category = _selectedCategory!;
 
-                        return _buildProductCard(
+                      return KeyedSubtree(
+                        key: ValueKey(category.items[index].id),
+                        child: _buildProductCard(
                           category,
                           index,
-                        );
-                      },
-                      childCount:
-                          _selectedCategory!.items.length,
-                    ),
+                        ),
+                      );
+                    },
+                    itemCount:
+                        _selectedCategory!.items.length,
+                    onReorder: (oldIndex, newIndex) {
+                      _reorderProducts(
+                        _selectedCategory!,
+                        oldIndex,
+                        newIndex,
+                      );
+                    },
                   ),
                 ),
             ],
