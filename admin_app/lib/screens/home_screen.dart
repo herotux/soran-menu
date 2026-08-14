@@ -15,6 +15,16 @@ import 'restaurant_settings_screen.dart';
 import 'settings_screen.dart';
 import 'setup_screen.dart';
 
+class _DraggedProduct {
+  final MenuCategory sourceCategory;
+  final MenuItemModel item;
+
+  const _DraggedProduct({
+    required this.sourceCategory,
+    required this.item,
+  });
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -1308,15 +1318,62 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.only(
                 right: 10,
               ),
-              child: ReorderableDelayedDragStartListener(
-                index: index,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedCategoryId = category.id;
-                    });
-                  },
-                  child: AnimatedContainer(
+              child: DragTarget<_DraggedProduct>(
+                onWillAcceptWithDetails: (details) {
+                  return details.data.sourceCategory != category;
+                },
+                onAcceptWithDetails: (details) {
+                  _moveProductToCategory(
+                    details.data.sourceCategory,
+                    category,
+                    details.data.item,
+                  );
+                },
+                builder: (
+                  context,
+                  candidateData,
+                  rejectedData,
+                ) {
+                  final isDropTarget = candidateData.isNotEmpty;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedCategoryId = category.id;
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(
+                        milliseconds: 180,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDropTarget
+                            ? const Color(0xFFFFCDD2)
+                            : selected
+                                ? const Color(0xFFFFE6E6)
+                                : Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(18),
+                        border: Border.all(
+                          color: isDropTarget
+                              ? const Color(0xFFE53935)
+                              : selected
+                                  ? const Color(0xFFE53935)
+                                  : Colors.transparent,
+                          width: isDropTarget ? 2.5 : 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: .04,
+                            ),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
                     duration: const Duration(
                       milliseconds: 180,
                     ),
@@ -1384,9 +1441,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           );
@@ -1467,6 +1525,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProductCard(
+    MenuCategory category,
+    int index,
+  ) {
+    final item = category.items[index];
+
+    return LongPressDraggable<_DraggedProduct>(
+      data: _DraggedProduct(
+        sourceCategory: category,
+        item: item,
+      ),
+      delay: const Duration(milliseconds: 250),
+      feedback: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: MediaQuery.sizeOf(context).width - 32,
+          child: Opacity(
+            opacity: .92,
+            child: _buildProductCardPreview(item),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: .35,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: _buildProductCardContent(category, index),
+        ),
+      ),
+      child: _buildProductCardContent(category, index),
+    );
+  }
+
+  Widget _buildProductCardContent(
     MenuCategory category,
     int index,
   ) {
@@ -1683,6 +1774,114 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildProductCardPreview(MenuItemModel item) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .15),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          if (item.image.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: RemoteImage(
+                path: item.image,
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+              ),
+            )
+          else
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F2F2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.fastfood_outlined),
+            ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              item.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _moveProductToCategory(
+    MenuCategory sourceCategory,
+    MenuCategory targetCategory,
+    MenuItemModel item,
+  ) async {
+    if (sourceCategory == targetCategory) return;
+
+    final currentMenu = menu;
+    if (currentMenu == null) return;
+
+    final sourceIndex = sourceCategory.items.indexOf(item);
+    if (sourceIndex < 0) return;
+
+    final sourceOldOrder =
+        List<MenuItemModel>.from(sourceCategory.items);
+    final targetOldOrder =
+        List<MenuItemModel>.from(targetCategory.items);
+
+    setState(() {
+      sourceCategory.items.removeAt(sourceIndex);
+      targetCategory.items.add(item);
+      _selectedCategoryId = targetCategory.id;
+    });
+
+    try {
+      final sha = await repo.save(currentMenu);
+
+      await MenuCache.save(
+        currentMenu,
+        sha: sha,
+      );
+
+      if (!mounted) return;
+
+      _showMessage(
+        '«${item.name}» به «${targetCategory.name}» منتقل شد.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        sourceCategory.items
+          ..clear()
+          ..addAll(sourceOldOrder);
+
+        targetCategory.items
+          ..clear()
+          ..addAll(targetOldOrder);
+      });
+
+      _showMessage(
+        'انتقال محصول ناموفق بود و تغییرات برگردانده شد.',
+      );
+    }
   }
 
   Widget _buildAddProductButton() {
