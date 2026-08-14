@@ -274,13 +274,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   Icon(
                     Icons.broken_image_outlined,
                     size: 56,
-                    color: const Color(0xFF5F6368),
+                    color: Color(0xFF5F6368),
                   ),
                   SizedBox(height: 8),
                   Text(
                     'تصویر قابل نمایش نیست',
                     style: TextStyle(
-                      color: const Color(0xFF5F6368),
+                      color: Color(0xFF5F6368),
                     ),
                   ),
                 ],
@@ -297,7 +297,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFFE8EAED),
+          color: Color(0xFFE8EAED),
         ),
       ),
       alignment: Alignment.center,
@@ -307,13 +307,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           Icon(
             Icons.image_outlined,
             size: 56,
-            color: const Color(0xFF5F6368),
+            color: Color(0xFF5F6368),
           ),
           SizedBox(height: 8),
           Text(
             'عکسی انتخاب نشده است',
             style: TextStyle(
-              color: const Color(0xFF5F6368),
+              color: Color(0xFF5F6368),
             ),
           ),
         ],
