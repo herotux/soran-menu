@@ -20,7 +20,7 @@ abstract class MenuRepository {
 
   Future<String> getRemoteSha();
 
-  Future<String> save(MenuData menu);
+  Future<void> save(MenuData menu);
 }
 
 class RemoteMenuRepository implements MenuRepository {
