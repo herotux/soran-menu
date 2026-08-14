@@ -7,7 +7,6 @@ import 'package:uuid/uuid.dart';
 import '../models/menu_models.dart';
 import '../services/github_service.dart';
 import '../widgets/remote_image.dart';
-import '../widgets/remote_image.dart';
 
 class ProductFormResult {
   final MenuItemModel item;
