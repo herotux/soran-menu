@@ -6,6 +6,8 @@ import 'package:uuid/uuid.dart';
 
 import '../models/menu_models.dart';
 import '../services/github_service.dart';
+import '../widgets/remote_image.dart';
+import '../widgets/remote_image.dart';
 
 class ProductFormResult {
   final MenuItemModel item;
@@ -236,11 +238,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Widget buildImagePreview() {
     if (selectedImage != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
         child: Image.file(
-          File(
-            selectedImage!.path,
-          ),
+          File(selectedImage!.path),
           height: 220,
           width: double.infinity,
           fit: BoxFit.cover,
@@ -248,24 +248,46 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       );
     }
 
-    if (imagePath.isNotEmpty) {
+    if (imagePath.trim().isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          imagePath,
+        borderRadius: BorderRadius.circular(18),
+        child: SizedBox(
           height: 220,
           width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) {
-            return Container(
+          child: RemoteImage(
+            path: imagePath,
+            width: double.infinity,
+            height: 220,
+            fit: BoxFit.cover,
+            placeholder: const Center(
+              child: CircularProgressIndicator(),
+            ),
+            error: Container(
               height: 220,
               alignment: Alignment.center,
-              child: const Icon(
-                Icons.broken_image,
-                size: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(18),
               ),
-            );
-          },
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.broken_image_outlined,
+                    size: 56,
+                    color: Colors.white54,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'تصویر قابل نمایش نیست',
+                    style: TextStyle(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -273,9 +295,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     return Container(
       height: 180,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF181818),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.grey,
+          color: Colors.white12,
         ),
       ),
       alignment: Alignment.center,
@@ -285,9 +308,15 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           Icon(
             Icons.image_outlined,
             size: 56,
+            color: Colors.white54,
           ),
           SizedBox(height: 8),
-          Text('عکسی انتخاب نشده است'),
+          Text(
+            'عکسی انتخاب نشده است',
+            style: TextStyle(
+              color: Colors.white70,
+            ),
+          ),
         ],
       ),
     );
