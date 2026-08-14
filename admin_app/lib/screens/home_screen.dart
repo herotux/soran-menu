@@ -1074,7 +1074,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       if (!deleteProducts &&
           uncategorized != null) {
-        uncategorized!.items.addAll(
+        uncategorized.items.addAll(
           category.items,
         );
       }
