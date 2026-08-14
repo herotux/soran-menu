@@ -542,25 +542,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    4,
-                    16,
-                    110,
-                  ),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final category = _selectedCategory!;
-
-                        return _buildProductCard(
-                          category,
-                          index,
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      16,
+                      4,
+                      16,
+                      110,
+                    ),
+                    child: ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics:
+                          const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      itemCount:
+                          _selectedCategory!.items.length,
+                      onReorder: (oldIndex, newIndex) {
+                        _reorderProducts(
+                          _selectedCategory!,
+                          oldIndex,
+                          newIndex,
                         );
                       },
-                      childCount:
-                          _selectedCategory!.items.length,
+                      itemBuilder: (context, index) {
+                        final category = _selectedCategory!;
+
+                        return Padding(
+                          key: ValueKey(
+                            category.items[index].id,
+                          ),
+                          padding: const EdgeInsets.only(
+                            bottom: 12,
+                          ),
+                          child:
+                              ReorderableDelayedDragStartListener(
+                            index: index,
+                            child: _buildProductCard(
+                              category,
+                              index,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -878,6 +901,48 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       _showMessage('ذخیره ترتیب دسته‌ها ناموفق بود.');
+    }
+  }
+
+  Future<void> _reorderProducts(
+    MenuCategory category,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    if (oldIndex == newIndex) return;
+
+    final oldOrder = List<MenuItemModel>.from(category.items);
+
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+
+      final item = category.items.removeAt(oldIndex);
+      category.items.insert(newIndex, item);
+    });
+
+    try {
+      final sha = await repo.save(menu!);
+
+      await MenuCache.save(
+        menu!,
+        sha: sha,
+      );
+
+      if (!mounted) return;
+
+      _showMessage('ترتیب محصولات ذخیره شد.');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        category.items
+          ..clear()
+          ..addAll(oldOrder);
+      });
+
+      _showMessage('ذخیره ترتیب محصولات ناموفق بود.');
     }
   }
 
