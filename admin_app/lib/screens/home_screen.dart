@@ -70,35 +70,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await _load();
   }
 
-  static const String _menuCacheKey = 'cached_menu_json';
-
-  Future<MenuData?> _loadCachedMenu() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getString(_menuCacheKey);
-
-      if (cached == null || cached.trim().isEmpty) {
-        return null;
-      }
-
-      final json = jsonDecode(cached) as Map<String, dynamic>;
-      return MenuData.fromJson(json);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _saveMenuCache(MenuData data) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      await prefs.setString(
-        _menuCacheKey,
-        jsonEncode(data.toJson()),
-      );
-    } catch (_) {}
-  }
-
   Future<void> _load() async {
     final cached = await MenuCache.load();
 
