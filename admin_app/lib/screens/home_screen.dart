@@ -594,14 +594,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           _topActionButton(
-            icon: Icons.refresh_rounded,
-            tooltip: 'بارگذاری مجدد',
-            onPressed: _load,
-          ),
-
-          const SizedBox(width: 6),
-
-          _topActionButton(
             icon: Icons.settings_outlined,
             tooltip: 'تنظیمات',
             onPressed: () async {
