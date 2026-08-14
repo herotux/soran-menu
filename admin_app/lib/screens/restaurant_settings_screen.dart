@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../widgets/remote_image.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/menu_models.dart';
@@ -154,32 +155,32 @@ class _RestaurantSettingsScreenState
       );
     }
 
-    if (logoPath.isNotEmpty) {
+    if (logoPath.trim().isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          logoPath,
+        child: RemoteImage(
+          path: logoPath,
           width: 180,
           height: 180,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) {
-            return Container(
-              width: 180,
-              height: 180,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                border: Border.all(color: Color(0xFF5F6368)),
-                borderRadius: BorderRadius.circular(16),
+          error: Container(
+            width: 180,
+            height: 180,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: const Color(0xFF5F6368),
               ),
-              child: const Icon(
-                Icons.broken_image_outlined,
-                size: 56,
-              ),
-            );
-          },
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.broken_image_outlined,
+            ),
+          ),
         ),
       );
     }
+
 
     return Container(
       width: 180,

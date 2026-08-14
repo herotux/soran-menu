@@ -1,12 +1,15 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/menu_models.dart';
 import '../services/app_settings.dart';
 import '../services/github_service.dart';
 import '../services/menu_repository.dart';
+import '../services/menu_cache.dart';
 import '../widgets/remote_image.dart';
 import 'product_form_screen.dart';
 import 'restaurant_settings_screen.dart';
@@ -67,14 +70,70 @@ class _HomeScreenState extends State<HomeScreen> {
     await _load();
   }
 
+  static const String _menuCacheKey = 'cached_menu_json';
+
+  Future<MenuData?> _loadCachedMenu() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString(_menuCacheKey);
+
+      if (cached == null || cached.trim().isEmpty) {
+        return null;
+      }
+
+      final json = jsonDecode(cached) as Map<String, dynamic>;
+      return MenuData.fromJson(json);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveMenuCache(MenuData data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString(
+        _menuCacheKey,
+        jsonEncode(data.toJson()),
+      );
+    } catch (_) {}
+  }
+
   Future<void> _load() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
+    final cached = await MenuCache.load();
+
+    if (cached != null && mounted) {
+      String? selectedId = _selectedCategoryId;
+
+      if (cached.categories.isNotEmpty) {
+        final exists = cached.categories.any(
+          (category) => category.id == selectedId,
+        );
+
+        if (!exists) {
+          selectedId = cached.categories.first.id;
+        }
+      } else {
+        selectedId = null;
+      }
+
+      setState(() {
+        menu = cached;
+        _selectedCategoryId = selectedId;
+        loading = false;
+        error = null;
+      });
+    } else if (mounted) {
+      setState(() {
+        loading = true;
+        error = null;
+      });
+    }
 
     try {
       final data = await repo.load();
+
+      await MenuCache.save(data);
 
       if (!mounted) return;
 
@@ -96,14 +155,26 @@ class _HomeScreenState extends State<HomeScreen> {
         menu = data;
         _selectedCategoryId = selectedId;
         loading = false;
+        error = null;
       });
     } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        loading = false;
-        error = e.toString();
-      });
+      if (menu != null) {
+        setState(() {
+          loading = false;
+          error = null;
+        });
+
+        _showMessage(
+          'نسخه محلی منو نمایش داده شد؛ دریافت نسخه جدید ناموفق بود.',
+        );
+      } else {
+        setState(() {
+          loading = false;
+          error = e.toString();
+        });
+      }
     }
   }
 
@@ -138,6 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await repo.save(currentMenu);
+      await MenuCache.save(currentMenu);
       _showMessage(
         'محصول به «${category.name}» اضافه و در GitHub ذخیره شد.',
       );
@@ -185,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await repo.save(currentMenu);
+      await MenuCache.save(currentMenu);
       _showMessage('محصول ویرایش و در GitHub ذخیره شد.');
     } catch (e) {
       _showMessage(
@@ -231,6 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await repo.save(currentMenu);
+      await MenuCache.save(currentMenu);
       _showMessage('محصول حذف و در GitHub ذخیره شد.');
     } catch (e) {
       _showMessage(
@@ -274,6 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await repo.save(menu!);
+      await MenuCache.save(menu!);
       _showMessage(
         'دسته «$name» ایجاد و در GitHub ذخیره شد.',
       );
@@ -306,6 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await repo.save(menu!);
+      await MenuCache.save(menu!);
       _showMessage(
         'دسته ویرایش و در GitHub ذخیره شد.',
       );
@@ -360,6 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await repo.save(currentMenu);
+      await MenuCache.save(currentMenu);
       _showMessage(
         'دسته حذف و در GitHub ذخیره شد.',
       );
@@ -1543,56 +1620,18 @@ class _CategoryDialogState
       );
     }
 
-    final path = imagePath.trim();
-
-    if (path.isNotEmpty) {
+    if (imagePath.trim().isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: FutureBuilder<String>(
-          future: AppSettings.imageUrl(path),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const SizedBox(
-                height: 150,
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-
-            final url = snapshot.data ?? '';
-
-            if (url.isEmpty) {
-              return const SizedBox(
-                height: 150,
-                child: Center(
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    size: 48,
-                  ),
-                ),
-              );
-            }
-
-            return Image.network(
-              url,
-              height: 150,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              errorBuilder: (_, __, ___) {
-                return const SizedBox(
-                  height: 150,
-                  child: Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      size: 48,
-                    ),
-                  ),
-                );
-              },
-            );
-          },
+        child: RemoteImage(
+          path: imagePath,
+          height: 150,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          error: const Icon(
+            Icons.broken_image,
+            size: 48,
+          ),
         ),
       );
     }
