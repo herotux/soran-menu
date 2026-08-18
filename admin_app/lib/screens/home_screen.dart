@@ -1337,7 +1337,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final isDropTarget =
                       candidateData.isNotEmpty;
 
-                  return GestureDetector(
+                  final card = GestureDetector(
                     onTap: () {
                       setState(() {
                         _selectedCategoryId = category.id;
@@ -1394,14 +1394,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                       width: double.infinity,
                                       fit: BoxFit.cover,
                                       error: const Icon(
-                                        Icons
-                                            .category_outlined,
+                                        Icons.category_outlined,
                                         size: 30,
                                       ),
                                     )
                                   : const Icon(
-                                      Icons
-                                          .category_outlined,
+                                      Icons.category_outlined,
                                       size: 30,
                                     ),
                             ),
@@ -1419,9 +1417,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : FontWeight.w600,
                             ),
                           ),
+                          const SizedBox(height: 2),
+                          const Icon(
+                            Icons.drag_handle_rounded,
+                            size: 17,
+                            color: Colors.grey,
+                          ),
                         ],
                       ),
                     ),
+                  );
+
+                  return ReorderableDelayedDragStartListener(
+                    index: index,
+                    child: card,
                   );
                 },
               ),
@@ -1514,7 +1523,7 @@ class _HomeScreenState extends State<HomeScreen> {
         sourceCategory: category,
         item: item,
       ),
-      delay: const Duration(milliseconds: 250),
+      delay: const Duration(milliseconds: 350),
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(
@@ -1527,12 +1536,18 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       childWhenDragging: Opacity(
         opacity: .35,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: _buildProductCardContent(category, index),
+        child: _buildProductCardContent(
+          category,
+          index,
         ),
       ),
-      child: _buildProductCardContent(category, index),
+      child: ReorderableDelayedDragStartListener(
+        index: index,
+        child: _buildProductCardContent(
+          category,
+          index,
+        ),
+      ),
     );
   }
 
