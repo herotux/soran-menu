@@ -21,15 +21,6 @@
       "image": "/images/potato.jpeg",
       "items": [
         {
-          "id": "65762",
-          "name": "سیب ساده",
-          "description": "سیب‌زمینی بلژیکی با سس مخصوص",
-          "price": 160,
-          "oldPrice": 200,
-          "image": "/images/1708799418819.jpeg",
-          "available": true
-        },
-        {
           "id": "65763",
           "name": "سیب پنیری",
           "description": "سیب‌زمینی بلژیکی با پنیر و سس",
@@ -187,6 +178,15 @@
           "price": 250,
           "oldPrice": 300,
           "image": "/images/1708604754090.jpeg",
+          "available": true
+        },
+        {
+          "id": "65762",
+          "name": "سیب ساده",
+          "description": "سیب‌زمینی بلژیکی با سس مخصوص",
+          "price": 160,
+          "oldPrice": 200,
+          "image": "/images/1708799418819.jpeg",
           "available": true
         }
       ]
