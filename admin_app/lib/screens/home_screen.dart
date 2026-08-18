@@ -1822,8 +1822,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final sourceOldOrder =
         List<MenuItemModel>.from(sourceCategory.items);
+
     final targetOldOrder =
         List<MenuItemModel>.from(targetCategory.items);
+
+    final oldSelectedCategoryId = _selectedCategoryId;
 
     setState(() {
       sourceCategory.items.removeAt(sourceIndex);
@@ -1855,6 +1858,8 @@ class _HomeScreenState extends State<HomeScreen> {
         targetCategory.items
           ..clear()
           ..addAll(targetOldOrder);
+
+        _selectedCategoryId = oldSelectedCategoryId;
       });
 
       _showMessage(
