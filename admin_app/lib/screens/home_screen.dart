@@ -1516,37 +1516,11 @@ class _HomeScreenState extends State<HomeScreen> {
     MenuCategory category,
     int index,
   ) {
-    final item = category.items[index];
-
-    return LongPressDraggable<_DraggedProduct>(
-      data: _DraggedProduct(
-        sourceCategory: category,
-        item: item,
-      ),
-      delay: const Duration(milliseconds: 350),
-      feedback: Material(
-        color: Colors.transparent,
-        child: SizedBox(
-          width: MediaQuery.sizeOf(context).width - 32,
-          child: Opacity(
-            opacity: .92,
-            child: _buildProductCardPreview(item),
-          ),
-        ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: .35,
-        child: _buildProductCardContent(
-          category,
-          index,
-        ),
-      ),
-      child: ReorderableDelayedDragStartListener(
-        index: index,
-        child: _buildProductCardContent(
-          category,
-          index,
-        ),
+    return ReorderableDelayedDragStartListener(
+      index: index,
+      child: _buildProductCardContent(
+        category,
+        index,
       ),
     );
   }
