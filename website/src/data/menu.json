@@ -21,21 +21,21 @@
       "image": "/images/potato.jpeg",
       "items": [
         {
-          "id": "65763",
-          "name": "سیب پنیری",
-          "description": "سیب‌زمینی بلژیکی با پنیر و سس",
-          "price": 250,
-          "oldPrice": 300,
-          "image": "/images/1708799694662.jpeg",
-          "available": true
-        },
-        {
           "id": "65764",
           "name": "سیب ویژه",
           "description": "سیب‌زمینی بلژیکی + قارچ + پنیر + پروسس + مخلفات",
           "price": 250,
           "oldPrice": 300,
           "image": "/images/1708799877602.jpeg",
+          "available": true
+        },
+        {
+          "id": "65763",
+          "name": "سیب پنیری",
+          "description": "سیب‌زمینی بلژیکی با پنیر و سس",
+          "price": 250,
+          "oldPrice": 300,
+          "image": "/images/1708799694662.jpeg",
           "available": true
         },
         {
