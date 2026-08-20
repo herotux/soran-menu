@@ -716,7 +716,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (_) =>
                             RestaurantSettingsScreen(
                           menu: currentMenu,
-                          repository: repo,
+                          repository: _repo!,
                         ),
                       ),
                     );

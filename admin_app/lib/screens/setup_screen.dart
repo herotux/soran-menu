@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../services/app_settings.dart';
 import '../services/github_service.dart';
-import '../repositories/menu_repository.dart';
 import '../repositories/github_menu_repository.dart';
 
 class SetupScreen extends StatefulWidget {

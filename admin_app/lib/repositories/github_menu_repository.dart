@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/menu_models.dart';
 import 'menu_repository.dart';
-import 'app_settings.dart';
+import '../services/app_settings.dart';
 
 class GitHubFile {
   final String content;
