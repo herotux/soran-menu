@@ -1,0 +1,13 @@
+
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+
+# Environment / secrets
+backend/.env
+
+# Temporary files
+admin_app/.tmp_parts/
+admin_app/**/*.backup-*

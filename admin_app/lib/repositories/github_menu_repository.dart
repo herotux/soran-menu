@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/menu_models.dart';
+import 'menu_repository.dart';
 import 'app_settings.dart';
 
 class GitHubFile {
@@ -15,15 +16,7 @@ class GitHubFile {
   });
 }
 
-abstract class MenuRepository {
-  Future<MenuData> load();
-
-  Future<String> getRemoteSha();
-
-  Future<String> save(MenuData menu);
-}
-
-class RemoteMenuRepository implements MenuRepository {
+class GitHubMenuRepository implements MenuRepository {
   static const String apiBase = 'https://api.github.com';
 
   Future<Map<String, String>> _settings() async {
@@ -112,7 +105,7 @@ class RemoteMenuRepository implements MenuRepository {
   }
 
   @override
-  Future<String> getRemoteSha() async {
+  Future<String> getVersion() async {
     final settings = await _settings();
 
     final path = Uri.encodeQueryComponent(

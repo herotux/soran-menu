@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../services/app_settings.dart';
 import '../services/github_service.dart';
-import '../services/menu_repository.dart';
+import '../repositories/menu_repository.dart';
+import '../repositories/github_menu_repository.dart';
 
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key});
@@ -66,7 +67,7 @@ class _SetupScreenState extends State<SetupScreen> {
         token: token.text.trim(),
       );
 
-      final repository = RemoteMenuRepository();
+      final repository = GitHubMenuRepository();
 
       await repository.load();
 

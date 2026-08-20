@@ -2,6 +2,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppSettings {
+  static const _backendKey = 'backend';
+  static const _apiBaseUrlKey = 'api_base_url';
+
   static const _ownerKey = 'github_owner';
   static const _repoKey = 'github_repo';
   static const _branchKey = 'github_branch';
@@ -10,6 +13,33 @@ class AppSettings {
   static const _tokenKey = 'github_token';
 
   static const _secureStorage = FlutterSecureStorage();
+
+  static Future<String> getBackend() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_backendKey) ?? 'github';
+  }
+
+  static Future<String> getApiBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_apiBaseUrlKey) ?? '';
+  }
+
+  static Future<void> saveBackend({
+    required String backend,
+    required String apiBaseUrl,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(
+      _backendKey,
+      backend.trim(),
+    );
+
+    await prefs.setString(
+      _apiBaseUrlKey,
+      apiBaseUrl.trim(),
+    );
+  }
 
   static Future<String> getOwner() async {
     final prefs = await SharedPreferences.getInstance();
@@ -104,6 +134,9 @@ class AppSettings {
 
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
+
+    await prefs.remove(_backendKey);
+    await prefs.remove(_apiBaseUrlKey);
 
     await prefs.remove(_ownerKey);
     await prefs.remove(_repoKey);

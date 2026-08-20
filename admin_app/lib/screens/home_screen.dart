@@ -7,7 +7,8 @@ import '../models/menu_models.dart';
 import '../services/app_settings.dart';
 import '../services/github_service.dart';
 import '../services/image_compressor.dart';
-import '../services/menu_repository.dart';
+import '../repositories/menu_repository.dart';
+import '../repositories/menu_repository_factory.dart';
 import '../services/menu_cache.dart';
 import '../widgets/remote_image.dart';
 import 'product_form_screen.dart';
@@ -33,7 +34,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final MenuRepository repo = RemoteMenuRepository();
+  MenuRepository? _repo;
 
   MenuData? menu;
 
@@ -49,6 +50,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initialize() async {
+    final backend = await AppSettings.getBackend();
+
+    if (backend == 'server') {
+      _repo = await MenuRepositoryFactory.create();
+    } else {
+      _repo = await MenuRepositoryFactory.create();
+    }
+
     final configured = await AppSettings.isConfigured();
 
     if (!mounted) return;
@@ -65,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       if (result == true) {
+        _repo = await MenuRepositoryFactory.create();
         await _load();
       } else {
         setState(() {
@@ -111,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final remoteSha = await repo.getRemoteSha();
+      final remoteSha = await _repo!.getVersion();
       final cachedSha = await MenuCache.getSha();
 
       if (menu != null &&
@@ -128,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final data = await repo.load();
+      final data = await _repo!.load();
 
       await MenuCache.save(
         data,
@@ -208,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(currentMenu);
+      final sha = await _repo!.save(currentMenu);
       await MenuCache.save(currentMenu, sha: sha);
 
       _showMessage(
@@ -266,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(currentMenu);
+      final sha = await _repo!.save(currentMenu);
 
       await MenuCache.save(
         currentMenu,
@@ -356,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(currentMenu);
+      final sha = await _repo!.save(currentMenu);
 
       await MenuCache.save(
         currentMenu,
@@ -849,7 +859,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(menu!);
+      final sha = await _repo!.save(menu!);
       await MenuCache.save(menu!, sha: sha);
       _showMessage(
         'دسته «$name» ایجاد و در GitHub ذخیره شد.',
@@ -900,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(currentMenu);
+      final sha = await _repo!.save(currentMenu);
 
       await MenuCache.save(
         currentMenu,
@@ -1111,7 +1121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(currentMenu);
+      final sha = await _repo!.save(currentMenu);
 
       await MenuCache.save(
         currentMenu,
@@ -1209,7 +1219,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(menu!);
+      final sha = await _repo!.save(menu!);
 
       await MenuCache.save(
         menu!,
@@ -1251,7 +1261,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(menu!);
+      final sha = await _repo!.save(menu!);
 
       await MenuCache.save(
         menu!,
@@ -1773,7 +1783,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final sha = await repo.save(currentMenu);
+      final sha = await _repo!.save(currentMenu);
 
       await MenuCache.save(
         currentMenu,
