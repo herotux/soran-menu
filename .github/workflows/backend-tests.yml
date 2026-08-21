@@ -28,4 +28,5 @@ jobs:
           DATABASE_URL: sqlite:///./test.db
           JWT_SECRET: test-secret
           APP_ENV: test
-        run: pytest -q
+          PYTHONPATH: .
+        run: python -m pytest -q
