@@ -8,6 +8,7 @@ from app.api.auth import router as auth_router
 from app.api.categories import router as categories_router
 from app.api.customer_compat import router as customer_compat_router
 from app.api.menu import router as menu_router
+from app.api.owner_platform import router as owner_platform_router
 from app.api.products import router as products_router
 from app.api.restaurants import router as restaurants_router
 from app.api.settings import router as settings_router
@@ -36,6 +37,7 @@ app.include_router(menu_router)
 app.include_router(settings_router)
 app.include_router(uploads_router)
 app.include_router(platform_router)
+app.include_router(owner_platform_router)
 app.include_router(customer_compat_router)
 
 
