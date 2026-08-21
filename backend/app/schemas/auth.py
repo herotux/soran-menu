@@ -1,11 +1,11 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
-    name: str | None = None
-    phone: str | None = None
+    name: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=50)
 
 
 class LoginRequest(BaseModel):
@@ -15,11 +15,10 @@ class LoginRequest(BaseModel):
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
     id: int
     email: EmailStr
-    name: str | None = None
-    phone: str | None = None
+    name: str | None
+    phone: str | None
     is_active: bool
 
 

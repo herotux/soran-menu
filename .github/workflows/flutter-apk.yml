@@ -2,8 +2,12 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'admin_app/**'
+      - '.github/workflows/flutter-apk.yml'
   push:
-    branches: [main]
+    branches: [main, feature/customer-platform]
     paths:
       - 'admin_app/**'
       - '.github/workflows/flutter-apk.yml'
@@ -14,112 +18,75 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.8'
           channel: stable
           cache: true
-
       - name: Create Flutter Android project
-        run: |
-          flutter create \
-            --platforms=android \
-            --org=com.herotux \
-            --project-name=soransib \
-            build_app
-
+        run: flutter create --platforms=android --org=com.herotux --project-name=soransib build_app
       - name: Configure Android NDK
         run: |
           python3 - <<'PY'
           from pathlib import Path
-
           p = Path("build_app/android/app/build.gradle.kts")
           s = p.read_text()
-
           if 'ndkVersion = "27.0.12077973"' not in s:
-              s = s.replace(
-                  'android {',
-                  'android {\n    ndkVersion = "27.0.12077973"',
-                  1
-              )
-
+              s = s.replace('android {', 'android {\n    ndkVersion = "27.0.12077973"', 1)
           p.write_text(s)
           PY
-
-      - name: Copy admin app source
+      - name: Copy app source
         run: |
-          rm -rf build_app/lib
+          rm -rf build_app/lib build_app/assets build_app/test
           cp -r admin_app/lib build_app/lib
-
-          rm -rf build_app/assets
           cp -r admin_app/assets build_app/assets
-
+          if [ -d admin_app/test ]; then cp -r admin_app/test build_app/test; fi
           cp admin_app/pubspec.yaml build_app/pubspec.yaml
-
+          rm -f build_app/test/widget_test.dart
+      - name: Verify test suite
+        run: |
+          if [ -f build_app/test/widget_test.dart ]; then
+            echo "Generated widget_test.dart must not be present"
+            exit 1
+          fi
+          if grep -R -n --exclude-dir=.dart_tool "MyApp" build_app/test 2>/dev/null; then
+            echo "Unexpected generated MyApp test reference found"
+            exit 1
+          fi
       - name: Download restaurant logo for app icon
         run: |
           mkdir -p build_app/assets/icon
-          curl -L --fail --retry 3 \
-            https://raw.githubusercontent.com/herotux/soran-menu/main/website/public/images/logo.png \
-            -o build_app/assets/icon/logo.png
-
-      - name: Configure Android app name
+          curl -L --fail --retry 3 https://raw.githubusercontent.com/herotux/soran-menu/main/website/public/images/logo.png -o build_app/assets/icon/logo.png
+      - name: Configure Android manifest
         run: |
           python3 - <<'PY'
           from pathlib import Path
-
           p = Path("build_app/android/app/src/main/AndroidManifest.xml")
-          s = p.read_text()
-          s = s.replace('android:label="soransib"', 'android:label="SoranSib"')
-          s = s.replace('android:label="build_app"', 'android:label="SoranSib"')
-          p.write_text(s)
-          PY
-
-      - name: Configure Android Internet permission
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("build_app/android/app/src/main/AndroidManifest.xml")
-          s = p.read_text()
-
+          s = p.read_text().replace('android:label="soransib"', 'android:label="SoranSib"').replace('android:label="build_app"', 'android:label="SoranSib"')
           permission = '<uses-permission android:name="android.permission.INTERNET"/>'
-
           if permission not in s:
-              s = s.replace(
-                  '<application',
-                  permission + '\n    <application',
-                  1
-              )
-
+              s = s.replace('<application', permission + '\n    <application', 1)
           p.write_text(s)
           PY
-
-      - name: Remove generated example test
-        run: rm -rf build_app/test
-
       - name: Install dependencies
         working-directory: build_app
         run: flutter pub get
-
       - name: Generate launcher icons
         working-directory: build_app
         run: dart run flutter_launcher_icons
-
       - name: Analyze
         working-directory: build_app
         run: flutter analyze
-
+      - name: Test
+        working-directory: build_app
+        run: flutter test
       - name: Build release APK
         working-directory: build_app
         run: flutter build apk --release
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
