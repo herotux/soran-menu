@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
+    name: str | None = None
+    phone: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -16,6 +18,8 @@ class UserResponse(BaseModel):
 
     id: int
     email: EmailStr
+    name: str | None = None
+    phone: str | None = None
     is_active: bool
 
 

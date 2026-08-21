@@ -1,143 +1,47 @@
 ---
 import "../styles/global.css";
-import menu from "../data/menu.json";
+import { loadMenu } from "../lib/menu-api";
 
+const menu = await loadMenu();
 const restaurant = menu.restaurant;
-
-const BASE = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
-
-const categories = [
-  {
-    id: "burger",
-    name: "برگر",
-    image: `${BASE}images/burger.jpeg`,
-    href: `${BASE}menu/burger`
-  },
-  {
-    id: "sandwich",
-    name: "ساندویچ",
-    image: `${BASE}images/sandwich.jpeg`,
-    href: `${BASE}menu/sandwich`
-  },
-  {
-    id: "fried",
-    name: "سوخاری",
-    image: `${BASE}images/fried.jpeg`,
-    href: `${BASE}menu/fried`
-  },
-  {
-    id: "potato",
-    name: "سیب‌زمینی",
-    image: `${BASE}images/potato.jpeg`,
-    href: `${BASE}menu/potato`
-  },
-  {
-    id: "special",
-    name: "ویژه",
-    image: `${BASE}images/special.jpeg`,
-    href: `${BASE}menu/special`
-  }
-];
+const BASE = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const categories = menu.categories ?? [];
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>{restaurant.name}</title>
-
-  <meta
-    name="description"
-    content={restaurant.description}
-  />
-
-  <meta name="theme-color" content="#FFFC36" />
-
-  <link rel="icon" href={`${import.meta.env.BASE_URL}/images/logo.png`} />
+  <meta name="description" content={restaurant.description ?? restaurant.name} />
+  <meta name="theme-color" content={restaurant.theme_secondary ?? "#FFFC36"} />
+  <link rel="icon" href={`${BASE}images/logo.png`} />
 </head>
-
 <body>
-
   <main>
-
-    <!-- معرفی رستوران -->
     <section class="about">
-
-      <img
-        src={`${import.meta.env.BASE_URL}/images/logo.png`}
-        class="restaurant-logo"
-        alt={restaurant.name}
-      />
-
+      <img src={`${BASE}${restaurant.logo ?? "/images/logo.png"}`} class="restaurant-logo" alt={restaurant.name} />
       <h1>{restaurant.name}</h1>
-
-      <p>با ما مزه‌های جدید و تست کن</p>
-
-      <p class="address">
-        کوردستان شهرستان کامیاران خیابان بهشتی جنب پاساژ تجارت
-      </p>
-
+      {restaurant.description && <p>{restaurant.description}</p>}
+      {restaurant.address && <p class="address">{restaurant.address}</p>}
       <div class="social">
-
-        <a href="tel:09333440918">
-          📞
-        </a>
-
-        <a
-          href="https://www.instagram.com/khane_sibzamini_kamyaran01/"
-          target="_blank"
-          rel="nofollow"
-        >
-          📷
-        </a>
-
+        {restaurant.mobile && <a href={`tel:${restaurant.mobile}`}>📞</a>}
+        {restaurant.instagram && <a href={restaurant.instagram} target="_blank" rel="nofollow">📷</a>}
+        {restaurant.telegram && <a href={restaurant.telegram} target="_blank" rel="nofollow">✈️</a>}
       </div>
-
-      <a class="club" href="/caller/Surankhaki">
-        🎁 عضویت باشگاه مشتریان 🎁
-      </a>
-
     </section>
 
-
-    <!-- دسته‌بندی‌ها -->
     <section class="categories">
-
-      {
-        categories.map((category) => (
-          <a
-            href={category.href}
-            class="category"
-          >
-
-            <img
-              src={category.image}
-              alt={category.name}
-            />
-
-            <div class="category-title">
-              {category.name}
-            </div>
-
-          </a>
-        ))
-      }
-
+      {categories.map((category) => (
+        <a href={`${BASE}menu/${category.external_id ?? category.id}`} class="category">
+          {category.image && <img src={`${BASE}${category.image}`} alt={category.name} />}
+          <div class="category-title">{category.name}</div>
+        </a>
+      ))}
     </section>
 
-
-    <div class="footer">
-
-      ❤️
-      <a href="https://github.com/herotux">
-        منو دیجیتال سافت منو
-      </a>
-
-    </div>
-
+    <div class="footer">❤️ منو دیجیتال {restaurant.name}</div>
   </main>
-
 </body>
 </html>
