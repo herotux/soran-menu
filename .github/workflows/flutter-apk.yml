@@ -41,9 +41,10 @@ jobs:
           PY
       - name: Copy app source
         run: |
-          rm -rf build_app/lib build_app/assets
+          rm -rf build_app/lib build_app/assets build_app/test
           cp -r admin_app/lib build_app/lib
           cp -r admin_app/assets build_app/assets
+          if [ -d admin_app/test ]; then cp -r admin_app/test build_app/test; fi
           cp admin_app/pubspec.yaml build_app/pubspec.yaml
       - name: Download restaurant logo for app icon
         run: |
