@@ -21,7 +21,7 @@ class MenuAdminApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'مدیریت منو',
+      title: 'SoranSib',
       locale: const Locale('fa'),
       theme: ThemeData(
         useMaterial3: true,
