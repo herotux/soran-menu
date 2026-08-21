@@ -11,9 +11,10 @@ from app.api.products import router as products_router
 from app.api.restaurants import router as restaurants_router
 from app.api.settings import router as settings_router
 from app.api.uploads import router as uploads_router
+from app.api.platform import router as platform_router
 from app.config import settings
 
-app = FastAPI(title=settings.app_name, version="0.2.0")
+app = FastAPI(title=settings.app_name, version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,8 +34,9 @@ app.include_router(restaurants_router)
 app.include_router(menu_router)
 app.include_router(settings_router)
 app.include_router(uploads_router)
+app.include_router(platform_router)
 
 
 @app.get("/health", tags=["System"])
 def health():
-    return {"status": "ok", "environment": settings.app_env}
+    return {"status": "ok", "environment": settings.app_env, "version": app.version}
