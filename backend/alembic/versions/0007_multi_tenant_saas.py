@@ -43,16 +43,9 @@ def upgrade() -> None:
 
     restaurant_columns = {c["name"] for c in inspector.get_columns("restaurants")}
     if "tenant_id" not in restaurant_columns:
+        # Keep this nullable until existing rows have been backfilled. The
+        # final batch operation below adds the FK and NOT NULL invariant.
         op.add_column("restaurants", sa.Column("tenant_id", sa.Integer(), nullable=True))
-        op.create_index("ix_restaurants_tenant_id", "restaurants", ["tenant_id"])
-        op.create_foreign_key(
-            "fk_restaurants_tenant_id",
-            "restaurants",
-            "tenants",
-            ["tenant_id"],
-            ["id"],
-            ondelete="CASCADE",
-        )
 
     # Backfill existing data. Restaurants owned by the same user are grouped
     # into one tenant, preserving the intended "one owner -> many restaurants" model.
@@ -70,11 +63,10 @@ def upgrade() -> None:
         owner_id = row["user_id"]
         tenant_id = tenant_by_owner.get(owner_id) if owner_id is not None else None
         if tenant_id is None and owner_id is not None:
-            existing = bind.execute(
-                sa.text("SELECT tm.tenant_id FROM tenant_memberships tm WHERE tm.user_id = :uid AND tm.role = 'owner' LIMIT 1"),
+            tenant_id = bind.execute(
+                sa.text("SELECT tenant_id FROM tenant_memberships WHERE user_id = :uid AND role = 'owner' LIMIT 1"),
                 {"uid": owner_id},
             ).scalar_one_or_none()
-            tenant_id = existing
 
         if tenant_id is None:
             slug = f"tenant-{row['id']}"
@@ -82,7 +74,10 @@ def upgrade() -> None:
                 sa.text("INSERT INTO tenants (name, slug) VALUES (:name, :slug)"),
                 {"name": row["name"], "slug": slug},
             )
-            tenant_id = bind.execute(sa.text("SELECT id FROM tenants WHERE slug = :slug"), {"slug": slug}).scalar_one()
+            tenant_id = bind.execute(
+                sa.text("SELECT id FROM tenants WHERE slug = :slug"),
+                {"slug": slug},
+            ).scalar_one()
 
         if owner_id is not None:
             bind.execute(
@@ -100,17 +95,28 @@ def upgrade() -> None:
             {"tenant_id": tenant_id, "restaurant_id": row["id"]},
         )
 
-    # New schema invariant: every restaurant belongs to exactly one tenant.
-    op.alter_column("restaurants", "tenant_id", nullable=False)
+    # Batch mode keeps this migration compatible with SQLite (used by CI) and
+    # PostgreSQL (production), while enforcing the final database invariant.
+    with op.batch_alter_table("restaurants") as batch_op:
+        batch_op.alter_column("tenant_id", existing_type=sa.Integer(), nullable=False)
+        batch_op.create_foreign_key(
+            "fk_restaurants_tenant_id",
+            "tenants",
+            ["tenant_id"],
+            ["id"],
+            ondelete="CASCADE",
+        )
+        batch_op.create_index("ix_restaurants_tenant_id", ["tenant_id"])
 
 
 def downgrade() -> None:
     bind = op.get_bind()
     inspector = inspect(bind)
     if "restaurants" in inspector.get_table_names():
-        op.drop_constraint("fk_restaurants_tenant_id", "restaurants", type_="foreignkey")
-        op.drop_index("ix_restaurants_tenant_id", table_name="restaurants")
-        op.drop_column("restaurants", "tenant_id")
+        with op.batch_alter_table("restaurants") as batch_op:
+            batch_op.drop_index("ix_restaurants_tenant_id")
+            batch_op.drop_constraint("fk_restaurants_tenant_id", type_="foreignkey")
+            batch_op.drop_column("tenant_id")
     if "tenant_memberships" in inspector.get_table_names():
         op.drop_table("tenant_memberships")
     if "tenants" in inspector.get_table_names():
