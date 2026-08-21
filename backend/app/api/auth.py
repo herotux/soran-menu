@@ -6,8 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.database.session import get_db
+from app.models.membership import Membership
+from app.models.restaurant import Restaurant
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from app.schemas.restaurant import RestaurantResponse
 from app.services.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -40,3 +43,8 @@ def login(data: LoginRequest, db: Annotated[Session, Depends(get_db)]):
 @router.get("/me", response_model=UserResponse)
 def me(current_user: Annotated[User, Depends(get_current_user)]):
     return current_user
+
+
+@router.get("/me/restaurants", response_model=list[RestaurantResponse])
+def my_restaurants(current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    return list(db.scalars(select(Restaurant).join(Membership, Membership.restaurant_id == Restaurant.id).where(Membership.user_id == current_user.id).order_by(Restaurant.id.desc())).all())
