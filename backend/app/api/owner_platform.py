@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import CurrentUser
 from app.database.session import get_db
 from app.models.membership import Membership
-from app.models.platform import Order, OrderStatus, Wallet, WalletTransaction
+from app.models.platform import CustomerRestaurant, LoyaltyTransaction, Order, OrderStatus, Wallet, WalletTransaction
 
 router = APIRouter(tags=["Owner Platform"])
 
@@ -31,6 +31,16 @@ def _admin(restaurant_id: int, user_id: int, db: Session):
     return membership
 
 
+def _tier(customer: CustomerRestaurant) -> str:
+    if customer.total_spent >= 5_000_000 or customer.visit_count >= 20:
+        return "platinum"
+    if customer.total_spent >= 2_000_000 or customer.visit_count >= 10:
+        return "gold"
+    if customer.total_spent >= 500_000 or customer.visit_count >= 5:
+        return "silver"
+    return "bronze"
+
+
 @router.get("/api/owner/{restaurant_id}/orders")
 def orders(restaurant_id: int, current_user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     _admin(restaurant_id, current_user.id, db)
@@ -46,9 +56,22 @@ def update_order(restaurant_id: int, order_id: int, data: OrderStatusUpdate, cur
     order = db.scalar(select(Order).where(Order.id == order_id, Order.restaurant_id == restaurant_id))
     if order is None:
         raise HTTPException(status_code=404, detail="سفارش پیدا نشد")
+    was_completed = order.status == OrderStatus.COMPLETED.value
     order.status = data.status
-    if data.status == OrderStatus.COMPLETED.value and order.completed_at is None:
+    if data.status == OrderStatus.COMPLETED.value and not was_completed:
         order.completed_at = datetime.utcnow()
+        if order.customer_id is not None:
+            customer = db.scalar(select(CustomerRestaurant).where(CustomerRestaurant.restaurant_id == restaurant_id, CustomerRestaurant.user_id == order.customer_id))
+            if customer is None:
+                customer = CustomerRestaurant(restaurant_id=restaurant_id, user_id=order.customer_id)
+                db.add(customer)
+                db.flush()
+            customer.total_spent += order.total
+            customer.visit_count += 1
+            earned = order.total // 10
+            customer.points += earned
+            customer.tier = _tier(customer)
+            db.add(LoyaltyTransaction(restaurant_id=restaurant_id, customer_id=order.customer_id, points=earned, reason="تکمیل سفارش", order_id=order.id))
     db.commit()
     return {"id": order.id, "status": order.status}
 
