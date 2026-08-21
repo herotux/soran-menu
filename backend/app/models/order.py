@@ -1,13 +1,15 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
 
 
 class OrderStatus(str, Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
@@ -21,8 +23,10 @@ class Order(Base):
     subtotal: Mapped[int] = mapped_column(Integer, nullable=False)
     discount_amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default=OrderStatus.COMPLETED.value)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=OrderStatus.PENDING.value)
+    note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class OrderItem(Base):
