@@ -23,6 +23,13 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Validate migrations
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          JWT_SECRET: test-secret
+          APP_ENV: test
+          PYTHONPATH: .
+        run: alembic upgrade head
       - name: Run tests
         env:
           DATABASE_URL: sqlite:///./test.db
