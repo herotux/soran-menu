@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.announcements import router as announcements_router
 from app.api.auth import router as auth_router
 from app.api.categories import router as categories_router
 from app.api.customer import router as customer_router
@@ -35,6 +36,7 @@ app.include_router(menu_router)
 app.include_router(settings_router)
 app.include_router(uploads_router)
 app.include_router(customer_router)
+app.include_router(announcements_router)
 
 
 @app.get("/health", tags=["System"])
