@@ -1,10 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.session import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class OrderStatus(str, Enum):
@@ -30,8 +34,17 @@ class CustomerRestaurant(Base):
     total_spent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     visit_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     tier: Mapped[str] = mapped_column(String(20), default="bronze", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("points", 0)
+        kwargs.setdefault("total_spent", 0)
+        kwargs.setdefault("visit_count", 0)
+        kwargs.setdefault("tier", "bronze")
+        kwargs.setdefault("created_at", _utcnow())
+        kwargs.setdefault("updated_at", _utcnow())
+        super().__init__(**kwargs)
 
 
 class Order(Base):
@@ -45,7 +58,7 @@ class Order(Base):
     discount_amount: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
@@ -81,6 +94,14 @@ class DiscountCode(Base):
     used_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime)
 
+    def __init__(self, **kwargs):
+        kwargs.setdefault("min_purchase", 0)
+        kwargs.setdefault("min_visits", 0)
+        kwargs.setdefault("min_spent", 0)
+        kwargs.setdefault("active", True)
+        kwargs.setdefault("used_count", 0)
+        super().__init__(**kwargs)
+
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -90,7 +111,7 @@ class Notification(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
 
 class LoyaltyTransaction(Base):
@@ -102,7 +123,7 @@ class LoyaltyTransaction(Base):
     points: Mapped[int] = mapped_column(Integer, nullable=False)
     reason: Mapped[str] = mapped_column(String(255), nullable=False)
     order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
 
 class Wallet(Base):
@@ -113,7 +134,7 @@ class Wallet(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     restaurant_id: Mapped[int] = mapped_column(ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False)
     balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
 class WalletTransaction(Base):
@@ -124,4 +145,4 @@ class WalletTransaction(Base):
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
