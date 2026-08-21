@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import CurrentUser, require_admin
+from app.api.dependencies import CurrentUser
 from app.database.session import get_db
 from app.models.category import Category
 from app.models.membership import Membership
@@ -15,6 +15,7 @@ from app.models.platform import (
     Order, OrderItem, OrderStatus, Wallet, WalletTransaction,
 )
 from app.models.product import Product
+from app.models.restaurant import Restaurant
 
 router = APIRouter(tags=["Customer Platform"])
 
@@ -51,6 +52,11 @@ class NotificationCreate(BaseModel):
     body: str
 
 
+class ProfileUpdate(BaseModel):
+    name: str | None = None
+    phone: str | None = None
+
+
 def _customer(db: Session, user_id: int, restaurant_id: int) -> CustomerRestaurant:
     row = db.scalar(select(CustomerRestaurant).where(CustomerRestaurant.user_id == user_id, CustomerRestaurant.restaurant_id == restaurant_id))
     if row is None:
@@ -73,13 +79,26 @@ def _tier(row: CustomerRestaurant) -> str:
 def _discount_amount(code: DiscountCode, subtotal: int) -> int:
     if subtotal < code.min_purchase:
         return 0
-    if code.discount_type == "percent":
-        value = subtotal * code.amount // 100
-    else:
-        value = code.amount
+    value = subtotal * code.amount // 100 if code.discount_type == "percent" else code.amount
     if code.max_discount is not None:
         value = min(value, code.max_discount)
     return min(value, subtotal)
+
+
+@router.get("/api/customer/restaurants")
+def customer_restaurants(db: Annotated[Session, Depends(get_db)]):
+    rows = db.scalars(select(Restaurant).order_by(Restaurant.id.desc())).all()
+    return [{"id": r.id, "name": r.name, "slug": r.slug, "logo": r.logo, "description": r.description} for r in rows]
+
+
+@router.patch("/api/customer/profile")
+def update_profile(data: ProfileUpdate, current_user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
+    if data.name is not None:
+        current_user.name = data.name.strip()
+    if data.phone is not None:
+        current_user.phone = data.phone.strip()
+    db.commit()
+    return {"id": current_user.id, "email": current_user.email, "name": current_user.name, "phone": current_user.phone}
 
 
 @router.get("/api/customer/{restaurant_id}/dashboard")
@@ -88,11 +107,7 @@ def customer_dashboard(restaurant_id: int, current_user: CurrentUser, db: Annota
     notifications = db.scalars(select(Notification).where(Notification.restaurant_id == restaurant_id, Notification.active).order_by(Notification.created_at.desc()).limit(20)).all()
     discounts = db.scalars(select(DiscountCode).where(DiscountCode.restaurant_id == restaurant_id, DiscountCode.active).order_by(DiscountCode.id.desc())).all()
     usable = [d for d in discounts if d.min_visits <= customer.visit_count and d.min_spent <= customer.total_spent and (d.expires_at is None or d.expires_at > datetime.utcnow()) and (d.usage_limit is None or d.used_count < d.usage_limit)]
-    return {
-        "customer": {"points": customer.points, "total_spent": customer.total_spent, "visit_count": customer.visit_count, "tier": customer.tier},
-        "notifications": [{"id": n.id, "title": n.title, "body": n.body, "created_at": n.created_at} for n in notifications],
-        "discounts": [{"id": d.id, "code": d.code, "title": d.title, "discount_type": d.discount_type, "amount": d.amount, "min_purchase": d.min_purchase} for d in usable],
-    }
+    return {"customer": {"points": customer.points, "total_spent": customer.total_spent, "visit_count": customer.visit_count, "tier": customer.tier}, "notifications": [{"id": n.id, "title": n.title, "body": n.body, "created_at": n.created_at} for n in notifications], "discounts": [{"id": d.id, "code": d.code, "title": d.title, "discount_type": d.discount_type, "amount": d.amount, "min_purchase": d.min_purchase} for d in usable]}
 
 
 @router.get("/api/customer/{restaurant_id}/notifications")
@@ -115,7 +130,6 @@ def create_order(data: OrderCreate, current_user: CurrentUser, db: Annotated[Ses
     by_id = {p.id: p for p in products}
     if len(by_id) != len(set(product_ids)):
         raise HTTPException(status_code=400, detail="یک یا چند محصول متعلق به این رستوران نیست")
-
     subtotal = 0
     order_items: list[OrderItem] = []
     for item in data.items:
@@ -125,7 +139,6 @@ def create_order(data: OrderCreate, current_user: CurrentUser, db: Annotated[Ses
         line = product.price * item.quantity
         subtotal += line
         order_items.append(OrderItem(product_id=product.id, name=product.name, unit_price=product.price, quantity=item.quantity, line_total=line))
-
     customer = _customer(db, current_user.id, data.restaurant_id)
     discount = 0
     code = None
@@ -140,7 +153,6 @@ def create_order(data: OrderCreate, current_user: CurrentUser, db: Annotated[Ses
         if code.usage_limit is not None and code.used_count >= code.usage_limit:
             raise HTTPException(status_code=400, detail="ظرفیت استفاده از کد تخفیف تمام شده است")
         discount = _discount_amount(code, subtotal)
-
     order = Order(restaurant_id=data.restaurant_id, customer_id=current_user.id, subtotal=subtotal, discount_amount=discount, total=subtotal - discount, note=data.note)
     order.items = order_items
     db.add(order)
