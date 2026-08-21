@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.restaurant import RestaurantResponse
+
 
 class CategoryCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
@@ -72,6 +74,3 @@ class MenuCategoryResponse(CategoryResponse):
 class PublicMenuResponse(BaseModel):
     restaurant: RestaurantResponse
     categories: list[MenuCategoryResponse]
-
-
-from app.schemas.restaurant import RestaurantResponse
