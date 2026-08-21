@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import CurrentUser, require_admin
 from app.database.session import get_db
 from app.models.announcement import Announcement
+from app.models.announcement_read import AnnouncementRead
 from app.models.customer import Customer
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.product import Product
@@ -44,15 +45,31 @@ def join_restaurant(restaurant_id: int, current_user: CurrentUser, db: Annotated
 
 
 @router.get("/restaurants/{restaurant_id}/announcements", response_model=list[AnnouncementResponse])
-def announcements(restaurant_id: int, db: Annotated[Session, Depends(get_db)]):
+def announcements(restaurant_id: int, current_user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     _restaurant_or_404(db, restaurant_id)
     now = datetime.utcnow()
-    return list(db.scalars(select(Announcement).where(
+    rows = list(db.execute(select(Announcement, AnnouncementRead.id.is_not(None)).outerjoin(
+        AnnouncementRead,
+        (AnnouncementRead.announcement_id == Announcement.id) & (AnnouncementRead.user_id == current_user.id),
+    ).where(
         Announcement.restaurant_id == restaurant_id,
         Announcement.is_active.is_(True),
         (Announcement.starts_at.is_(None) | (Announcement.starts_at <= now)),
         (Announcement.ends_at.is_(None) | (Announcement.ends_at >= now)),
-    ).order_by(Announcement.created_at.desc())))
+    ).order_by(Announcement.created_at.desc()))
+    return [AnnouncementResponse.model_validate(announcement).model_copy(update={"read": read_id is not None}) for announcement, read_id in rows]
+
+
+@router.post("/announcements/{announcement_id}/read")
+def mark_announcement_read(announcement_id: int, current_user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
+    announcement = db.get(Announcement, announcement_id)
+    if announcement is None:
+        raise HTTPException(status_code=404, detail="اطلاعیه پیدا نشد")
+    existing = db.scalar(select(AnnouncementRead).where(AnnouncementRead.announcement_id == announcement_id, AnnouncementRead.user_id == current_user.id))
+    if existing is None:
+        db.add(AnnouncementRead(announcement_id=announcement_id, user_id=current_user.id))
+        db.commit()
+    return {"read": True}
 
 
 @router.get("/restaurants/{restaurant_id}/loyalty", response_model=LoyaltySummaryResponse)
@@ -81,7 +98,6 @@ def _create_order(db: Session, user_id: int, data: OrderCreate, allow_manual_ite
         raise HTTPException(status_code=400, detail="یک یا چند محصول پیدا نشد")
     if any(p.category.restaurant_id != data.restaurant_id for p in products.values()):
         raise HTTPException(status_code=400, detail="محصول متعلق به این رستوران نیست")
-
     lines = []
     for item in data.items:
         product = products.get(item.product_id)
