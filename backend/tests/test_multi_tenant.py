@@ -18,4 +18,4 @@ def test_restaurant_requires_tenant():
 def test_tenant_relationships_are_declared():
     assert "restaurants" in Tenant.__mapper__.relationships
     assert "memberships" in Tenant.__mapper__.relationships
-    assert "tenant_memberships" in Restaurant.__mapper__.relationships if False else True
+    assert "tenant" in Restaurant.__mapper__.relationships
