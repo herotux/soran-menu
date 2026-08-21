@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class DiscountCode(Base):
@@ -25,6 +29,14 @@ class DiscountCode(Base):
     used_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime)
 
+    def __init__(self, **kwargs):
+        kwargs.setdefault("min_purchase", 0)
+        kwargs.setdefault("min_visits", 0)
+        kwargs.setdefault("min_spent", 0)
+        kwargs.setdefault("active", True)
+        kwargs.setdefault("used_count", 0)
+        super().__init__(**kwargs)
+
 
 class LoyaltyTransaction(Base):
     __tablename__ = "loyalty_transactions"
@@ -35,7 +47,7 @@ class LoyaltyTransaction(Base):
     points: Mapped[int] = mapped_column(Integer, nullable=False)
     reason: Mapped[str] = mapped_column(String(255), nullable=False)
     order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
 
 
 class Wallet(Base):
@@ -45,7 +57,7 @@ class Wallet(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
     balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, onupdate=_utc_now, nullable=False)
 
 
 class WalletTransaction(Base):
@@ -56,4 +68,4 @@ class WalletTransaction(Base):
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
