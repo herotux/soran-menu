@@ -1,34 +1,44 @@
 services:
-
-  api:
-    build:
-      context: ./backend
-    container_name: menu_api
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      APP_ENV: development
-      DATABASE_URL: postgresql://menu:menu_password@postgres:5432/menu_db
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgres:
-    image: postgres:16-alpine
-    container_name: menu_postgres
+  db:
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: menu_db
-      POSTGRES_USER: menu
-      POSTGRES_PASSWORD: menu_password
+      POSTGRES_DB: ${POSTGRES_DB:-menu_db}
+      POSTGRES_USER: ${POSTGRES_USER:-menu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U menu -d menu_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-menu} -d ${POSTGRES_DB:-menu_db}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - uploads:/app/uploads
+
+  website:
+    build:
+      context: ./website
+      args:
+        API_URL: ${PUBLIC_API_URL:-http://api:8000}
+        RESTAURANT_SLUG: ${RESTAURANT_SLUG}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
 volumes:
   postgres_data:
+  uploads:
