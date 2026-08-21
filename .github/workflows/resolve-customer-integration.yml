@@ -1,0 +1,25 @@
+name: Resolve customer platform integration
+
+on:
+  push:
+    branches: [integration/customer-platform-main]
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    if: "!contains(github.event.head_commit.message, 'Merge customer-platform into integration')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge customer platform
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/customer-platform
+          git merge --no-ff -X theirs origin/feature/customer-platform -m "Merge customer-platform into integration"
+          git push origin HEAD:integration/customer-platform-main
