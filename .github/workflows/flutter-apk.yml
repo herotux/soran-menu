@@ -46,6 +46,19 @@ jobs:
           cp -r admin_app/assets build_app/assets
           if [ -d admin_app/test ]; then cp -r admin_app/test build_app/test; fi
           cp admin_app/pubspec.yaml build_app/pubspec.yaml
+          # flutter create generates test/widget_test.dart; never allow that
+          # template test to leak into the real application test suite.
+          rm -f build_app/test/widget_test.dart
+      - name: Verify test suite
+        run: |
+          if [ -f build_app/test/widget_test.dart ]; then
+            echo "Generated widget_test.dart must not be present"
+            exit 1
+          fi
+          if grep -R -n --exclude-dir=.dart_tool "MyApp" build_app/test 2>/dev/null; then
+            echo "Unexpected generated MyApp test reference found"
+            exit 1
+          fi
       - name: Download restaurant logo for app icon
         run: |
           mkdir -p build_app/assets/icon
