@@ -34,12 +34,10 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Prepare menu JSON
-        run: |
-          mkdir -p public/data
-          cp src/data/menu.json public/data/menu.json
-
       - name: Build
+        env:
+          API_URL: ${{ vars.PUBLIC_API_URL }}
+          RESTAURANT_SLUG: ${{ vars.RESTAURANT_SLUG }}
         run: npm run build
 
       - name: Upload
@@ -55,5 +53,5 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy
-        id: deployment
         uses: actions/deploy-pages@v4
+        id: deployment
