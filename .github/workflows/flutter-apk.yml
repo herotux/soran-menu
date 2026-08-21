@@ -7,7 +7,7 @@ on:
       - 'admin_app/**'
       - '.github/workflows/flutter-apk.yml'
   push:
-    branches: [main]
+    branches: [main, feature/customer-platform]
     paths:
       - 'admin_app/**'
       - '.github/workflows/flutter-apk.yml'
@@ -46,8 +46,6 @@ jobs:
           cp -r admin_app/assets build_app/assets
           if [ -d admin_app/test ]; then cp -r admin_app/test build_app/test; fi
           cp admin_app/pubspec.yaml build_app/pubspec.yaml
-          # flutter create generates test/widget_test.dart; never allow that
-          # template test to leak into the real application test suite.
           rm -f build_app/test/widget_test.dart
       - name: Verify test suite
         run: |
