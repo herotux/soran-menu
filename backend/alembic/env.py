@@ -5,7 +5,11 @@ from alembic import context
 
 from app.config import settings
 from app.database.session import Base
-from app.models import User, Restaurant, Membership, Category, Product
+from app.models import (
+    User, Restaurant, Membership, Category, Product,
+    CustomerRestaurant, Order, OrderItem, DiscountCode, Notification,
+    LoyaltyTransaction, Wallet, WalletTransaction,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
