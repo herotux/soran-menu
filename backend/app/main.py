@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.auth import router as auth_router
 from app.api.categories import router as categories_router
@@ -9,12 +13,18 @@ from app.api.settings import router as settings_router
 from app.api.uploads import router as uploads_router
 from app.config import settings
 
+app = FastAPI(title=settings.app_name, version="0.2.0")
 
-app = FastAPI(
-    title=settings.app_name,
-    version="0.1.0",
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+Path("/app/uploads").mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 
 app.include_router(auth_router)
 app.include_router(categories_router)
@@ -27,7 +37,4 @@ app.include_router(uploads_router)
 
 @app.get("/health", tags=["System"])
 def health():
-    return {
-        "status": "ok",
-        "environment": settings.app_env,
-    }
+    return {"status": "ok", "environment": settings.app_env}
