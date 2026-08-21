@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
@@ -13,6 +13,10 @@ class Customer(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     restaurant_id: Mapped[int] = mapped_column(ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False, index=True)
+    points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_spent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    visit_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    tier: Mapped[str] = mapped_column(String(20), default="bronze", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 
