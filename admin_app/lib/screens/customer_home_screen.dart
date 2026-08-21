@@ -12,7 +12,7 @@ class CustomerHomeScreen extends StatefulWidget {
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   final api = ApiService();
   List restaurants = [];
-  Map<String, dynamic>? selected;
+  int? selectedId;
   Map<String, dynamic>? menu;
   Map<String, dynamic>? loyalty;
   List announcements = [];
@@ -28,7 +28,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     setState(() => loading = true);
     try {
       restaurants = await api.get('/api/public/restaurants') as List;
-      if (restaurants.isNotEmpty) await selectRestaurant(restaurants.first);
+      if (restaurants.isNotEmpty) await selectRestaurant(restaurants.first as Map);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
@@ -37,13 +37,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Future<void> selectRestaurant(Map restaurant) async {
-    setState(() {
-      selected = Map<String, dynamic>.from(restaurant);
-      menu = null;
-      loyalty = null;
-    });
+    final id = restaurant['id'] as int;
+    setState(() { selectedId = id; menu = null; loyalty = null; announcements = []; });
     try {
-      final id = restaurant['id'];
       final slug = Uri.encodeComponent(restaurant['slug'] as String);
       final results = await Future.wait([
         api.get('/api/public/restaurants/$slug/menu'),
@@ -51,11 +47,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         api.get('/api/customer/restaurants/$id/loyalty'),
       ]);
       if (!mounted) return;
-      setState(() {
-        menu = results[0] as Map<String, dynamic>;
-        announcements = results[1] as List;
-        loyalty = results[2] as Map<String, dynamic>;
-      });
+      setState(() { menu = results[0] as Map<String, dynamic>; announcements = results[1] as List; loyalty = results[2] as Map<String, dynamic>; });
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
     }
@@ -71,20 +63,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            DropdownButtonFormField<Map<String, dynamic>>(
-              value: selected,
+            DropdownButtonFormField<int>(
+              value: selectedId,
               decoration: const InputDecoration(labelText: 'رستوران'),
-              items: restaurants.map((r) => DropdownMenuItem(value: Map<String, dynamic>.from(r), child: Text(r['name'] as String))).toList(),
-              onChanged: (r) { if (r != null) selectRestaurant(r); },
+              items: restaurants.map((r) => DropdownMenuItem<int>(value: r['id'] as int, child: Text(r['name'] as String))).toList(),
+              onChanged: (id) { final r = restaurants.firstWhere((x) => x['id'] == id); selectRestaurant(r as Map); },
             ),
             const SizedBox(height: 16),
-            if (loyalty != null) Card(
-              child: ListTile(
-                leading: const Icon(Icons.stars),
-                title: Text('${loyalty!['tier']?['name'] ?? 'برنزی'} — ${loyalty!['discount_percent']}٪ تخفیف'),
-                subtitle: Text('خرید قبلی: ${loyalty!['total_spent']} | سفارش‌ها: ${loyalty!['completed_orders']}'),
-              ),
-            ),
+            if (loyalty != null) Card(child: ListTile(
+              leading: const Icon(Icons.stars),
+              title: Text('${loyalty!['tier']?['name'] ?? 'برنزی'} — ${loyalty!['discount_percent']}٪ تخفیف'),
+              subtitle: Text('خرید قبلی: ${loyalty!['total_spent']} | سفارش‌ها: ${loyalty!['completed_orders']}'),
+            )),
             if (announcements.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text('اطلاعیه‌ها', style: Theme.of(context).textTheme.titleLarge),
