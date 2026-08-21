@@ -9,6 +9,7 @@ from app.models import (
     User, Restaurant, Membership, Category, Product,
     Customer, LoyaltyTier, Announcement, AnnouncementRead, Order, OrderItem,
 )
+from app.models.platform_extra import DiscountCode, LoyaltyTransaction, Wallet, WalletTransaction
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
