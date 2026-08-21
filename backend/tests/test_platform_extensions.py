@@ -1,9 +1,11 @@
 from app.api.platform import _discount_amount, _tier
-from app.models.platform import CustomerRestaurant, DiscountCode, OrderStatus
+from app.models.customer import Customer
+from app.models.order import OrderStatus
+from app.models.platform_extra import DiscountCode
 
 
-def test_customer_tiers_are_progressive():
-    customer = CustomerRestaurant(user_id=1, restaurant_id=1)
+def test_customer_tiers_progress_by_visits():
+    customer = Customer(user_id=1, restaurant_id=1)
     assert _tier(customer) == "bronze"
     customer.visit_count = 5
     assert _tier(customer) == "silver"
@@ -27,4 +29,6 @@ def test_fixed_discount_never_exceeds_subtotal():
 
 def test_order_status_contract():
     assert OrderStatus.PENDING.value == "pending"
+    assert OrderStatus.CONFIRMED.value == "confirmed"
     assert OrderStatus.COMPLETED.value == "completed"
+    assert OrderStatus.CANCELLED.value == "cancelled"

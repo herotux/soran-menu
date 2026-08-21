@@ -1,9 +1,8 @@
-"""multi-tenant customer platform
+"""customer accounts, announcements, orders and loyalty tiers
 
 Revision ID: 0003_customer_platform
 Revises: 0002_menu_schema
 """
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
@@ -15,124 +14,76 @@ depends_on = None
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    tables = set(inspect(bind).get_table_names())
-    users = {c["name"] for c in inspect(bind).get_columns("users")}
-    if "name" not in users:
-        op.add_column("users", sa.Column("name", sa.String(255), nullable=True))
-    if "phone" not in users:
-        op.add_column("users", sa.Column("phone", sa.String(50), nullable=True))
+    tables = set(inspect(op.get_bind()).get_table_names())
 
-    if "customer_restaurants" not in tables:
-        op.create_table("customer_restaurants",
+    if "customers" not in tables:
+        op.create_table(
+            "customers",
             sa.Column("id", sa.Integer(), primary_key=True),
             sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
             sa.Column("restaurant_id", sa.Integer(), sa.ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("points", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("total_spent", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("visit_count", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("tier", sa.String(20), nullable=False, server_default="bronze"),
             sa.Column("created_at", sa.DateTime(), nullable=False),
-            sa.Column("updated_at", sa.DateTime(), nullable=False),
-            sa.UniqueConstraint("user_id", "restaurant_id", name="uq_customer_restaurant"))
-        op.create_index("ix_customer_restaurants_user_id", "customer_restaurants", ["user_id"])
-        op.create_index("ix_customer_restaurants_restaurant_id", "customer_restaurants", ["restaurant_id"])
+            sa.UniqueConstraint("user_id", "restaurant_id", name="uq_customer_restaurant"),
+        )
+        op.create_index("ix_customers_user_id", "customers", ["user_id"])
+        op.create_index("ix_customers_restaurant_id", "customers", ["restaurant_id"])
 
-    if "orders" not in tables:
-        op.create_table("orders",
+    if "loyalty_tiers" not in tables:
+        op.create_table(
+            "loyalty_tiers",
             sa.Column("id", sa.Integer(), primary_key=True),
             sa.Column("restaurant_id", sa.Integer(), sa.ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("customer_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
-            sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
-            sa.Column("subtotal", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("discount_amount", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("total", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("note", sa.Text(), nullable=True),
-            sa.Column("created_at", sa.DateTime(), nullable=False),
-            sa.Column("completed_at", sa.DateTime(), nullable=True))
-        op.create_index("ix_orders_restaurant_id", "orders", ["restaurant_id"])
-        op.create_index("ix_orders_customer_id", "orders", ["customer_id"])
-        op.create_index("ix_orders_status", "orders", ["status"])
-        op.create_index("ix_orders_created_at", "orders", ["created_at"])
+            sa.Column("name", sa.String(100), nullable=False),
+            sa.Column("min_spend", sa.Integer(), nullable=False, server_default="0"),
+            sa.Column("discount_percent", sa.Integer(), nullable=False, server_default="0"),
+            sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
+        )
+        op.create_index("ix_loyalty_tiers_restaurant_id", "loyalty_tiers", ["restaurant_id"])
 
-    if "order_items" not in tables:
-        op.create_table("order_items",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column("order_id", sa.Integer(), sa.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id", ondelete="RESTRICT"), nullable=False),
-            sa.Column("name", sa.String(255), nullable=False),
-            sa.Column("unit_price", sa.Integer(), nullable=False),
-            sa.Column("quantity", sa.Integer(), nullable=False),
-            sa.Column("line_total", sa.Integer(), nullable=False))
-        op.create_index("ix_order_items_order_id", "order_items", ["order_id"])
-
-    if "discount_codes" not in tables:
-        op.create_table("discount_codes",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column("restaurant_id", sa.Integer(), sa.ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("code", sa.String(50), nullable=False),
-            sa.Column("title", sa.String(255), nullable=False),
-            sa.Column("discount_type", sa.String(20), nullable=False),
-            sa.Column("amount", sa.Integer(), nullable=False),
-            sa.Column("min_purchase", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("max_discount", sa.Integer(), nullable=True),
-            sa.Column("min_visits", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("min_spent", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-            sa.Column("usage_limit", sa.Integer(), nullable=True),
-            sa.Column("used_count", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("expires_at", sa.DateTime(), nullable=True))
-        op.create_index("ix_discount_codes_restaurant_id", "discount_codes", ["restaurant_id"])
-        op.create_index("ix_discount_codes_code", "discount_codes", ["code"])
-
-    if "notifications" not in tables:
-        op.create_table("notifications",
+    if "announcements" not in tables:
+        op.create_table(
+            "announcements",
             sa.Column("id", sa.Integer(), primary_key=True),
             sa.Column("restaurant_id", sa.Integer(), sa.ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False),
             sa.Column("title", sa.String(255), nullable=False),
             sa.Column("body", sa.Text(), nullable=False),
-            sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-            sa.Column("created_at", sa.DateTime(), nullable=False))
-        op.create_index("ix_notifications_restaurant_id", "notifications", ["restaurant_id"])
+            sa.Column("image", sa.String(500), nullable=True),
+            sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+            sa.Column("starts_at", sa.DateTime(), nullable=True),
+            sa.Column("ends_at", sa.DateTime(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+        )
+        op.create_index("ix_announcements_restaurant_id", "announcements", ["restaurant_id"])
 
-    if "loyalty_transactions" not in tables:
-        op.create_table("loyalty_transactions",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column("restaurant_id", sa.Integer(), sa.ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("customer_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("points", sa.Integer(), nullable=False),
-            sa.Column("reason", sa.String(255), nullable=False),
-            sa.Column("order_id", sa.Integer(), sa.ForeignKey("orders.id", ondelete="SET NULL"), nullable=True),
-            sa.Column("created_at", sa.DateTime(), nullable=False))
-        op.create_index("ix_loyalty_transactions_restaurant_id", "loyalty_transactions", ["restaurant_id"])
-        op.create_index("ix_loyalty_transactions_customer_id", "loyalty_transactions", ["customer_id"])
-
-    if "wallets" not in tables:
-        op.create_table("wallets",
+    if "orders" not in tables:
+        op.create_table(
+            "orders",
             sa.Column("id", sa.Integer(), primary_key=True),
             sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
             sa.Column("restaurant_id", sa.Integer(), sa.ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("balance", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("updated_at", sa.DateTime(), nullable=False),
-            sa.UniqueConstraint("user_id", "restaurant_id", name="uq_wallet_customer_restaurant"))
+            sa.Column("subtotal", sa.Integer(), nullable=False),
+            sa.Column("discount_amount", sa.Integer(), nullable=False, server_default="0"),
+            sa.Column("total_amount", sa.Integer(), nullable=False),
+            sa.Column("status", sa.String(20), nullable=False, server_default="completed"),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+        )
+        op.create_index("ix_orders_user_id", "orders", ["user_id"])
+        op.create_index("ix_orders_restaurant_id", "orders", ["restaurant_id"])
 
-    if "wallet_transactions" not in tables:
-        op.create_table("wallet_transactions",
+    if "order_items" not in tables:
+        op.create_table(
+            "order_items",
             sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column("wallet_id", sa.Integer(), sa.ForeignKey("wallets.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("amount", sa.Integer(), nullable=False),
-            sa.Column("kind", sa.String(30), nullable=False),
-            sa.Column("description", sa.String(255), nullable=False),
-            sa.Column("created_at", sa.DateTime(), nullable=False))
-        op.create_index("ix_wallet_transactions_wallet_id", "wallet_transactions", ["wallet_id"])
+            sa.Column("order_id", sa.Integer(), sa.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id", ondelete="SET NULL"), nullable=True),
+            sa.Column("product_name", sa.String(255), nullable=False),
+            sa.Column("unit_price", sa.Integer(), nullable=False),
+            sa.Column("quantity", sa.Integer(), nullable=False, server_default="1"),
+        )
+        op.create_index("ix_order_items_order_id", "order_items", ["order_id"])
 
 
 def downgrade() -> None:
-    for table in ["wallet_transactions", "wallets", "loyalty_transactions", "notifications", "discount_codes", "order_items", "orders", "customer_restaurants"]:
+    for table in ("order_items", "orders", "announcements", "loyalty_tiers", "customers"):
         if table in inspect(op.get_bind()).get_table_names():
             op.drop_table(table)
-    users = {c["name"] for c in inspect(op.get_bind()).get_columns("users")}
-    if "phone" in users:
-        op.drop_column("users", "phone")
-    if "name" in users:
-        op.drop_column("users", "name")
