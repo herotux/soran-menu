@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.session import Base
 from app.models.customer import LoyaltyTier
 from app.models.restaurant import Restaurant
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.order import Order, OrderStatus
 from app.services.loyalty import ensure_default_tiers, get_loyalty_summary
@@ -16,10 +17,18 @@ def make_db():
     return engine
 
 
+def make_tenant(db):
+    tenant = Tenant(name="Test Tenant", slug="test-tenant")
+    db.add(tenant)
+    db.flush()
+    return tenant
+
+
 def test_default_loyalty_tiers_are_created_once():
     engine = make_db()
     with Session(engine) as db:
-        restaurant = Restaurant(name="Test", slug="test")
+        tenant = make_tenant(db)
+        restaurant = Restaurant(tenant_id=tenant.id, name="Test", slug="test")
         db.add(restaurant)
         db.flush()
         ensure_default_tiers(db, restaurant.id)
@@ -33,8 +42,9 @@ def test_default_loyalty_tiers_are_created_once():
 def test_loyalty_uses_completed_orders_only():
     engine = make_db()
     with Session(engine) as db:
+        tenant = make_tenant(db)
         user = User(email="customer@example.com", password_hash="x")
-        restaurant = Restaurant(name="Test", slug="test")
+        restaurant = Restaurant(tenant_id=tenant.id, name="Test", slug="test")
         db.add_all([user, restaurant])
         db.flush()
         ensure_default_tiers(db, restaurant.id)

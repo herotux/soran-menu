@@ -18,3 +18,4 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
+    tenant_memberships = relationship("TenantMembership", back_populates="user", cascade="all, delete-orphan")

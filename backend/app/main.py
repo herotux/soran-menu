@@ -13,10 +13,11 @@ from app.api.platform import router as platform_router
 from app.api.products import router as products_router
 from app.api.restaurants import router as restaurants_router
 from app.api.settings import router as settings_router
+from app.api.tenants import router as tenants_router
 from app.api.uploads import router as uploads_router
 from app.config import settings
 
-app = FastAPI(title=settings.app_name, version="0.4.0")
+app = FastAPI(title=settings.app_name, version="0.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +31,7 @@ Path("/app/uploads").mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 
 app.include_router(auth_router)
+app.include_router(tenants_router)
 app.include_router(categories_router)
 app.include_router(products_router)
 app.include_router(restaurants_router)
