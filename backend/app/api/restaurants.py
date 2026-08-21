@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import CurrentUser, get_restaurant_membership, require_admin, require_owner
+from app.api.dependencies import CurrentTenant, CurrentUser, get_restaurant_membership, require_admin, require_owner
 from app.database.session import get_db
 from app.models.membership import Membership, MembershipRole
 from app.models.restaurant import Restaurant
+from app.models.tenant import Tenant
 from app.schemas.restaurant import RestaurantCreate, RestaurantResponse, RestaurantUpdate
 
 router = APIRouter(prefix="/api/restaurants", tags=["Restaurants"])
@@ -21,8 +22,13 @@ def make_slug(name: str) -> str:
 
 
 @router.post("", response_model=RestaurantResponse, status_code=status.HTTP_201_CREATED)
-def create_restaurant(data: RestaurantCreate, current_user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
-    restaurant = Restaurant(name=data.name.strip(), slug=make_slug(data.name))
+def create_restaurant(
+    data: RestaurantCreate,
+    current_user: CurrentUser,
+    current_tenant: CurrentTenant,
+    db: Annotated[Session, Depends(get_db)],
+):
+    restaurant = Restaurant(tenant_id=current_tenant.id, name=data.name.strip(), slug=make_slug(data.name))
     db.add(restaurant)
     db.flush()
     db.add(Membership(user_id=current_user.id, restaurant_id=restaurant.id, role=MembershipRole.OWNER.value))
@@ -32,10 +38,19 @@ def create_restaurant(data: RestaurantCreate, current_user: CurrentUser, db: Ann
 
 
 @router.get("", response_model=list[RestaurantResponse])
-def list_my_restaurants(current_user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
+def list_my_restaurants(
+    current_user: CurrentUser,
+    current_tenant: CurrentTenant,
+    db: Annotated[Session, Depends(get_db)],
+):
     return list(db.scalars(
-        select(Restaurant).join(Membership, Membership.restaurant_id == Restaurant.id)
-        .where(Membership.user_id == current_user.id).order_by(Restaurant.id.desc())
+        select(Restaurant)
+        .join(Membership, Membership.restaurant_id == Restaurant.id)
+        .where(
+            Membership.user_id == current_user.id,
+            Restaurant.tenant_id == current_tenant.id,
+        )
+        .order_by(Restaurant.id.desc())
     ).all())
 
 
