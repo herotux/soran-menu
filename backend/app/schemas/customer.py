@@ -31,6 +31,7 @@ class AnnouncementResponse(BaseModel):
     starts_at: datetime | None
     ends_at: datetime | None
     created_at: datetime
+    read: bool = False
 
 
 class OrderItemCreate(BaseModel):
